@@ -81,6 +81,7 @@ describe('TaskDetailProvider', () => {
       getTask: vi.fn(),
       getTasksWithCrossBranch: vi.fn().mockResolvedValue([]),
       getStatuses: vi.fn().mockResolvedValue(['To Do', 'In Progress', 'Done']),
+      getConfig: vi.fn().mockResolvedValue({}),
       getUniqueLabels: vi.fn().mockResolvedValue([]),
       getUniqueAssignees: vi.fn().mockResolvedValue([]),
       getMilestones: vi.fn().mockResolvedValue([]),
