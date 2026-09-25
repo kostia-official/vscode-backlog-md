@@ -1193,19 +1193,26 @@ export class BacklogParser {
 
     // A section starts only on an exact `## Context|Decision|Consequences|Alternatives`
     // line outside a code fence; any other heading is content of the current section.
-    let inFence = false;
+    let fence: string | undefined;
     const preamble: string[] = [];
     for (let i = lineIndex; i < lines.length; i++) {
       const line = lines[i];
       const trimmedLine = line.trim();
 
-      if (/^(```|~~~)/.test(trimmedLine)) {
-        inFence = !inFence;
-      } else if (!inFence) {
-        // Extract title from first heading if not in frontmatter
-        if (trimmedLine.startsWith('# ') && !decision.title) {
-          decision.title = trimmedLine.replace(/^#\s+/, '');
-          continue;
+      // A fence closes only on a bare run of its own char, at least as long.
+      const marker = /^(`{3,}|~{3,})/.exec(trimmedLine)?.[1];
+      if (fence) {
+        const closes = trimmedLine === marker && marker[0] === fence[0];
+        if (closes && marker.length >= fence.length) fence = undefined;
+      } else if (marker) {
+        fence = marker;
+      } else {
+        // Before the first section, a `# ` line is the title: taken when the
+        // frontmatter has none, skipped when it repeats it.
+        if (!currentSection && trimmedLine.startsWith('# ')) {
+          const heading = trimmedLine.replace(/^#\s+/, '');
+          if (!decision.title) decision.title = heading;
+          if (heading === decision.title) continue;
         }
 
         const heading = /^##\s+(context|decision|consequences|alternatives)$/i.exec(trimmedLine);

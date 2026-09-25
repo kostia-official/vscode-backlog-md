@@ -79,3 +79,30 @@ describe('parseDecisionContent text before the first section', () => {
     expect(decision.decision).toBe('Redis.');
   });
 });
+
+describe('parseDecisionContent headings and fences', () => {
+  const parser = new BacklogParser('/fake/backlog');
+  const parse = (body: string) =>
+    parser.parseDecisionContent(
+      `---\ntitle: Pick a queue\nstatus: proposed\n---\n${body}`,
+      '/fake/decisions/decision-9.md'
+    )!;
+
+  it('skips a leading # line that repeats the frontmatter title', () => {
+    const decision = parse('# Pick a queue\n\nWhy now.\n\n## Context\n\nTwo options.\n');
+    expect(decision.context).toBe('Why now.\n\nTwo options.');
+  });
+
+  it('keeps a # line inside a section as content', () => {
+    const decision = parse('## Decision\n\n# Redis\n\nFast enough.\n');
+    expect(decision.title).toBe('Pick a queue');
+    expect(decision.decision).toBe('# Redis\n\nFast enough.');
+  });
+
+  it('closes a fence only on the same char at least as long', () => {
+    const body = '## Context\n\n````md\n```\n~~~\n## Decision\n````\n\n## Decision\n\nRedis.\n';
+    const decision = parse(body);
+    expect(decision.context).toBe('````md\n```\n~~~\n## Decision\n````');
+    expect(decision.decision).toBe('Redis.');
+  });
+});
