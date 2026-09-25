@@ -101,16 +101,16 @@ export class TaskPreviewViewProvider extends BaseViewProvider {
     );
     const statuses = await this.parser.getStatuses();
     const descriptionHtml = taskWithBlocks.description
-      ? await parseMarkdown(taskWithBlocks.description)
+      ? await parseMarkdown(taskWithBlocks.description, taskWithBlocks.filePath)
       : '';
     const planHtml = taskWithBlocks.implementationPlan
-      ? await parseMarkdown(taskWithBlocks.implementationPlan)
+      ? await parseMarkdown(taskWithBlocks.implementationPlan, taskWithBlocks.filePath)
       : '';
     const notesHtml = taskWithBlocks.implementationNotes
-      ? await parseMarkdown(taskWithBlocks.implementationNotes)
+      ? await parseMarkdown(taskWithBlocks.implementationNotes, taskWithBlocks.filePath)
       : '';
     const finalSummaryHtml = taskWithBlocks.finalSummary
-      ? await parseMarkdown(taskWithBlocks.finalSummary)
+      ? await parseMarkdown(taskWithBlocks.finalSummary, taskWithBlocks.filePath)
       : '';
     this.postMessage({
       type: 'taskPreviewData',

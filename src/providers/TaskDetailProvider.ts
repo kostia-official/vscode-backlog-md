@@ -110,7 +110,8 @@ export class TaskDetailProvider {
       return;
     }
 
-    if (uri.fsPath === this.currentFilePath) {
+    // The watcher reports a linked task by its real path, the panel knows it by the link.
+    if (uri.fsPath === this.currentFilePath || uri.fsPath === realpathOr(this.currentFilePath)) {
       if (!fs.existsSync(uri.fsPath)) {
         vscode.window.showWarningMessage(
           `Task file was deleted: ${uri.fsPath.split('/').pop() || uri.fsPath}`
@@ -380,12 +381,17 @@ export class TaskDetailProvider {
       const isBlocked = blockingDependencyIds.length > 0;
 
       // Parse body section markdown
-      const descriptionHtml = task.description ? await parseMarkdown(task.description) : '';
-      const planHtml = task.implementationPlan ? await parseMarkdown(task.implementationPlan) : '';
-      const notesHtml = task.implementationNotes
-        ? await parseMarkdown(task.implementationNotes)
+      const source = task.filePath;
+      const descriptionHtml = task.description ? await parseMarkdown(task.description, source) : '';
+      const planHtml = task.implementationPlan
+        ? await parseMarkdown(task.implementationPlan, source)
         : '';
-      const finalSummaryHtml = task.finalSummary ? await parseMarkdown(task.finalSummary) : '';
+      const notesHtml = task.implementationNotes
+        ? await parseMarkdown(task.implementationNotes, source)
+        : '';
+      const finalSummaryHtml = task.finalSummary
+        ? await parseMarkdown(task.finalSummary, source)
+        : '';
 
       // Compute parent task info
       let parentTask: { id: string; title: string } | undefined;
@@ -526,7 +532,10 @@ export class TaskDetailProvider {
         if (TaskDetailProvider.currentTaskId && this.parser) {
           const task = await this.getCurrentTaskFromContext();
           if (task?.filePath) {
-            vscode.commands.executeCommand('vscode.open', vscode.Uri.file(task.filePath));
+            vscode.commands.executeCommand(
+              'vscode.open',
+              vscode.Uri.file(realpathOr(task.filePath))
+            );
           }
         }
         break;
@@ -1030,7 +1039,10 @@ export class TaskDetailProvider {
 
       case 'View Diff':
         if (task?.filePath) {
-          await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(task.filePath));
+          await vscode.commands.executeCommand(
+            'vscode.open',
+            vscode.Uri.file(realpathOr(task.filePath))
+          );
         }
         break;
     }
@@ -1075,5 +1087,13 @@ export class TaskDetailProvider {
       return this.resolveTaskForOpen(TaskDetailProvider.currentTaskRef);
     }
     return this.parser.getTask(TaskDetailProvider.currentTaskId);
+  }
+}
+
+function realpathOr(filePath: string): string {
+  try {
+    return fs.realpathSync(filePath);
+  } catch {
+    return filePath;
   }
 }

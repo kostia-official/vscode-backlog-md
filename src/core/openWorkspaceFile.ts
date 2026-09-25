@@ -41,14 +41,15 @@ export function isValidLinkString(value: unknown): value is string {
  * GitHub-style heading slug (`#my-heading`).
  *
  * Resolution order: if `sourceFilePath` is given, the path is resolved relative
- * to that file's directory first (so `../../foo.md` in a task file lands where
- * a markdown reader would expect). Falls back to each workspace folder.
+ * to the directory of that file's realpath, then of the file itself (so
+ * `../../foo.md` in a task file lands where a markdown reader would expect).
+ * Falls back to each workspace folder.
  *
  * The path is URL-decoded so links written as `task-041%20-%20foo.md` resolve
  * to the literal filename `task-041 - foo.md`. Backslash separators are
  * normalized to forward slashes so Windows-authored links work cross-platform.
- * Absolute paths, `..`-escaped paths that resolve outside every workspace
- * folder, and directory targets are rejected with a warning.
+ * Absolute and `..`-escaped paths that resolve outside every workspace folder,
+ * and directory targets, are rejected with a warning.
  */
 export async function openWorkspaceFile(
   relativePath: string | undefined,
@@ -72,22 +73,34 @@ export async function openWorkspaceFile(
 
   const decodedPath = safeDecode(relativePath).replace(/\\/g, '/');
 
-  if (isAbsolutePath(decodedPath)) {
-    vscode.window.showWarningMessage(
-      `Refusing to open absolute path outside workspace: ${decodedPath}`
-    );
-    return;
-  }
-
   const folders = vscode.workspace.workspaceFolders;
 
   const allCandidates: vscode.Uri[] = [];
-  if (sourceFilePath) {
-    allCandidates.push(vscode.Uri.file(path.resolve(path.dirname(sourceFilePath), decodedPath)));
-  }
-  if (folders) {
-    for (const folder of folders) {
-      allCandidates.push(vscode.Uri.joinPath(folder.uri, decodedPath));
+  if (isAbsolutePath(decodedPath)) {
+    if (!folders || !isInsideWorkspace(decodedPath, folders)) {
+      vscode.window.showWarningMessage(
+        `Refusing to open absolute path outside workspace: ${decodedPath}`
+      );
+      return;
+    }
+    allCandidates.push(vscode.Uri.file(decodedPath));
+  } else {
+    // A task file under `tasks/` may be a symlink into the task's own
+    // directory; its relative links are written from there, so that
+    // directory is tried before the link's own.
+    if (sourceFilePath) {
+      const sourceDirs = new Set([
+        path.dirname((await safeRealpath(sourceFilePath)) ?? sourceFilePath),
+        path.dirname(sourceFilePath),
+      ]);
+      for (const dir of sourceDirs) {
+        allCandidates.push(vscode.Uri.file(path.resolve(dir, decodedPath)));
+      }
+    }
+    if (folders) {
+      for (const folder of folders) {
+        allCandidates.push(vscode.Uri.joinPath(folder.uri, decodedPath));
+      }
     }
   }
 
@@ -180,7 +193,7 @@ function isAbsolutePath(value: string): boolean {
   return false;
 }
 
-function isInsideWorkspace(
+export function isInsideWorkspace(
   resolvedFsPath: string,
   folders: readonly vscode.WorkspaceFolder[]
 ): boolean {
