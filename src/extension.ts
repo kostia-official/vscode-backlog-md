@@ -8,7 +8,7 @@ import { BacklogParser } from './core/BacklogParser';
 import { BacklogWriter } from './core/BacklogWriter';
 import { TaskCreatePanel } from './providers/TaskCreatePanel';
 import { FileWatcher } from './core/FileWatcher';
-import { readTaskHome, taskHomeGlob } from './core/taskHome';
+import { readTaskHome, realpathOr, taskHomeGlob } from './core/taskHome';
 import { BacklogCli } from './core/BacklogCli';
 import { createDebouncedHandler } from './core/debounce';
 import type { TaskSource, DataSourceMode } from './core/types';
@@ -80,11 +80,14 @@ export function activate(context: vscode.ExtensionContext) {
     dispose: () => languageProviderDisposables.forEach((d) => d.dispose()),
   });
 
-  function registerLanguageProviders(activeParser: BacklogParser, backlogDir: string) {
+  async function registerLanguageProviders(activeParser: BacklogParser, backlogDir: string) {
+    const taskHome = await activeParser.getConfig().then(readTaskHome, () => undefined);
+    // The backlog was switched while the config was read; that switch registers its own.
+    if (activeParser !== parser) return;
     for (const d of languageProviderDisposables) d.dispose();
     languageProviderDisposables = [];
 
-    const selector = createBacklogDocumentSelector(backlogDir);
+    const selector = createBacklogDocumentSelector(backlogDir, taskHome);
     completionProvider = new BacklogCompletionProvider(activeParser);
     linkProvider = new BacklogDocumentLinkProvider(activeParser);
     hoverProvider = new BacklogHoverProvider(activeParser);
@@ -103,7 +106,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   if (parser && activeRoot) {
     console.log('[Backlog.md] Parser initialized');
-    registerLanguageProviders(parser, activeRoot.backlogDir);
+    void registerLanguageProviders(parser, activeRoot.backlogDir);
   }
 
   // Initialize file watcher (only if backlog folder exists)
@@ -203,7 +206,7 @@ export function activate(context: vscode.ExtensionContext) {
     contentDetailProvider.setParser(parser);
 
     // Re-register language providers (selector may differ per backlog dir)
-    registerLanguageProviders(parser, root.backlogDir);
+    void registerLanguageProviders(parser, root.backlogDir);
 
     // Refresh views
     tasksHosts.forEach((host) => host.refresh());
@@ -393,7 +396,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
     const task = await parser.getTask(taskId);
     if (task?.filePath) {
-      vscode.commands.executeCommand('vscode.open', vscode.Uri.file(task.filePath));
+      vscode.commands.executeCommand('vscode.open', vscode.Uri.file(realpathOr(task.filePath)));
     }
   };
 

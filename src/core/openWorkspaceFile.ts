@@ -144,12 +144,14 @@ export async function openWorkspaceFile(
     if ((stat.type & vscode.FileType.File) === 0) {
       continue;
     }
-    const range = await resolveRange(uri, decodedPath, fragment, stat.size);
+    // Open the real file so a link and its target never show as two tabs.
+    const target = realFsPath ? vscode.Uri.file(realFsPath) : uri;
+    const range = await resolveRange(target, decodedPath, fragment, stat.size);
     if (range) {
-      const editor = await vscode.window.showTextDocument(uri, { selection: range });
+      const editor = await vscode.window.showTextDocument(target, { selection: range });
       editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
     } else {
-      await vscode.commands.executeCommand('vscode.open', uri);
+      await vscode.commands.executeCommand('vscode.open', target);
     }
     return;
   }

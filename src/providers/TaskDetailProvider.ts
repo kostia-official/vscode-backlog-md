@@ -7,7 +7,7 @@ import { isReadOnlyTask, getReadOnlyTaskContext, type Task, type TaskSource } fr
 import { StatusCallbackRunner } from '../core/StatusCallbackRunner';
 import { openWorkspaceFile, isValidLinkString } from '../core/openWorkspaceFile';
 import { parseMarkdown } from '../core/parseMarkdown';
-import { readTaskHome } from '../core/taskHome';
+import { readTaskHome, realpathOr } from '../core/taskHome';
 
 /**
  * Task detail data structure sent to the webview
@@ -1100,13 +1100,5 @@ export class TaskDetailProvider {
       return this.resolveTaskForOpen(TaskDetailProvider.currentTaskRef);
     }
     return this.parser.getTask(TaskDetailProvider.currentTaskId);
-  }
-}
-
-function realpathOr(filePath: string): string {
-  try {
-    return fs.realpathSync(filePath);
-  } catch {
-    return filePath;
   }
 }

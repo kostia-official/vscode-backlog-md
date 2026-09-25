@@ -26,6 +26,15 @@ export function assertTaskId(id: string): void {
   }
 }
 
+/** The realpath of `filePath`, or `filePath` itself when it cannot be resolved. */
+export function realpathOr(filePath: string): string {
+  try {
+    return fs.realpathSync(filePath);
+  } catch {
+    return filePath;
+  }
+}
+
 /** The `task_home` template as a glob: every `{…}` placeholder becomes `*`. */
 export function taskHomeGlob(taskHome: string): string {
   return taskHome.replace(/\{[^}]*\}/g, '*');

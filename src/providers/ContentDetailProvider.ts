@@ -93,6 +93,8 @@ export class ContentDetailProvider {
       await this.openDecision(decisionId);
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to update decision status: ${error}`);
+      // Re-render so the select shows the status still on disk.
+      await this.openDecision(decisionId);
     }
   }
 

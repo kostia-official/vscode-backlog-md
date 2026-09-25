@@ -777,7 +777,7 @@ describe('openWorkspaceFile', () => {
 
     expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
       'vscode.open',
-      expect.objectContaining({ fsPath: '/repo/docs/link.md' })
+      expect.objectContaining({ fsPath: '/repo/docs/actual.md' })
     );
   });
 

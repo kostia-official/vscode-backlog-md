@@ -66,6 +66,11 @@ describe('openWorkspaceFile with a symlinked source', () => {
     expect(opened()).toBe(path.join(root, 'board/tasks/sibling.md'));
   });
 
+  it('opens the target of a link, not the link itself', async () => {
+    await openWorkspaceFile('board/tasks/d-1 - X.md', null);
+    expect(opened()).toBe(path.join(root, 'D-1-x/task.md'));
+  });
+
   it('opens an absolute path inside the workspace', async () => {
     const target = path.join(root, 'D-1-x/sibling.md');
     await openWorkspaceFile(target, null);
