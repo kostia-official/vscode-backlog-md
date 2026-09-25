@@ -1191,30 +1191,27 @@ export class BacklogParser {
       alternatives: [],
     };
 
+    // A section starts only on an exact `## Context|Decision|Consequences|Alternatives`
+    // line outside a code fence; any other heading is content of the current section.
+    let inFence = false;
     for (let i = lineIndex; i < lines.length; i++) {
       const line = lines[i];
       const trimmedLine = line.trim();
 
-      // Extract title from first heading if not in frontmatter
-      if (trimmedLine.startsWith('# ') && !decision.title) {
-        decision.title = trimmedLine.replace(/^#\s+/, '');
-        continue;
-      }
-
-      if (trimmedLine.startsWith('## ')) {
-        const sectionName = trimmedLine.substring(3).toLowerCase();
-        if (sectionName.includes('context')) {
-          currentSection = 'context';
-        } else if (sectionName.includes('decision')) {
-          currentSection = 'decision';
-        } else if (sectionName.includes('consequences')) {
-          currentSection = 'consequences';
-        } else if (sectionName.includes('alternatives')) {
-          currentSection = 'alternatives';
-        } else {
-          currentSection = '';
+      if (/^(```|~~~)/.test(trimmedLine)) {
+        inFence = !inFence;
+      } else if (!inFence) {
+        // Extract title from first heading if not in frontmatter
+        if (trimmedLine.startsWith('# ') && !decision.title) {
+          decision.title = trimmedLine.replace(/^#\s+/, '');
+          continue;
         }
-        continue;
+
+        const heading = /^##\s+(context|decision|consequences|alternatives)$/i.exec(trimmedLine);
+        if (heading) {
+          currentSection = heading[1].toLowerCase();
+          continue;
+        }
       }
 
       if (currentSection && sections[currentSection]) {

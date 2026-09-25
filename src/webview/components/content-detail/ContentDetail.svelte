@@ -120,7 +120,7 @@
     </div>
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div
-      class="detail-body"
+      class="detail-body markdown-content"
       data-testid="document-body"
       onclick={handleMarkdownClick}
       use:renderMermaidAction={contentHtml}
@@ -160,7 +160,7 @@
         {/if}
       </div>
     </div>
-    <div class="detail-body" data-testid="decision-body">
+    <div class="detail-body markdown-content" data-testid="decision-body">
       {#if decisionSections.context}
         <div class="decision-section">
           <h2>Context</h2>

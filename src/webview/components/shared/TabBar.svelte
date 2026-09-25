@@ -22,19 +22,25 @@
 
   const overflowModes = new Set(overflowTabs.map((t) => t.mode));
 
+  // `inline` shows every view as a tab, with no "More" menu. The editor-tab host
+  // marks its body `tasks-editor-page`, where there is room for all of them.
   let {
     activeTab,
     draftCount = 0,
+    inline = document.body.classList.contains('tasks-editor-page'),
     onTabChange,
     onCreateTask,
     onRefresh,
   }: {
     activeTab: TabMode;
     draftCount?: number;
+    inline?: boolean;
     onTabChange: (tab: TabMode) => void;
     onCreateTask: () => void;
     onRefresh: () => void;
   } = $props();
+
+  const barTabs = $derived(inline ? [...primaryTabs, ...overflowTabs] : primaryTabs);
 
   let overflowOpen = $state(false);
   let overflowContainerEl: HTMLDivElement | undefined = $state();
@@ -108,8 +114,40 @@
 
 </script>
 
-<div class="tab-bar" role="tablist">
-  {#each primaryTabs as tab (tab.mode)}
+{#snippet icon(mode: TabMode, size: number)}
+  {#if mode === 'kanban'}
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>
+    </svg>
+  {:else if mode === 'list'}
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>
+    </svg>
+  {:else if mode === 'dashboard'}
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 3v18h18"/><path d="M13 17V9"/><path d="M18 17V5"/><path d="M8 17v-3"/>
+    </svg>
+  {:else if mode === 'drafts'}
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m18 5-2.414-2.414A2 2 0 0 0 14.172 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2"/><path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>
+    </svg>
+  {:else if mode === 'archived'}
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>
+    </svg>
+  {:else if mode === 'docs'}
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
+    </svg>
+  {:else if mode === 'decisions'}
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m20 16-4-4 4-4"/><path d="M4 20V4"/><path d="m20 16H8a4 4 0 0 1 0-8h12"/>
+    </svg>
+  {/if}
+{/snippet}
+
+<div class="tab-bar" class:inline role="tablist">
+  {#each barTabs as tab (tab.mode)}
     <button
       class="tab"
       class:active={activeTab === tab.mode}
@@ -118,94 +156,70 @@
       data-testid="tab-{tab.mode}"
       onclick={() => onTabChange(tab.mode)}
     >
-      {#if tab.mode === 'kanban'}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>
-        </svg>
-      {:else if tab.mode === 'list'}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>
-        </svg>
-      {:else if tab.mode === 'dashboard'}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 3v18h18"/><path d="M13 17V9"/><path d="M18 17V5"/><path d="M8 17v-3"/>
-        </svg>
-      {/if}
-      <span class="tab-label">{tab.label}</span>
-    </button>
-  {/each}
-
-  <!-- Overflow menu -->
-  <div class="overflow-container" bind:this={overflowContainerEl}>
-    <button
-      class="tab overflow-trigger"
-      class:active={isOverflowTabActive}
-      data-testid="overflow-menu-btn"
-      onclick={toggleOverflow}
-      bind:this={triggerEl}
-      aria-expanded={overflowOpen}
-      aria-haspopup="true"
-    >
-      <!-- Ellipsis icon -->
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
-      </svg>
+      {@render icon(tab.mode, 16)}
       <span class="tab-label">
-        {overflowLabel}
-        {#if draftCount > 0 && !isOverflowTabActive}
-          <span class="overflow-draft-badge" data-testid="overflow-draft-badge">{draftCount}</span>
+        {tab.label}
+        {#if tab.mode === 'drafts' && draftCount > 0 && activeTab !== 'drafts'}
+          <span class="overflow-draft-badge" data-testid="tab-draft-badge">{draftCount}</span>
         {/if}
       </span>
     </button>
+  {/each}
 
-    {#if overflowOpen}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <!-- svelte-ignore a11y_interactive_supports_focus -->
-      <div
-        class="overflow-menu"
-        role="menu"
-        bind:this={overflowMenuEl}
-        onkeydown={handleOverflowKeydown}
+  {#if !inline}
+    <!-- Overflow menu -->
+    <div class="overflow-container" bind:this={overflowContainerEl}>
+      <button
+        class="tab overflow-trigger"
+        class:active={isOverflowTabActive}
+        data-testid="overflow-menu-btn"
+        onclick={toggleOverflow}
+        bind:this={triggerEl}
+        aria-expanded={overflowOpen}
+        aria-haspopup="true"
       >
-        {#each overflowTabs as tab (tab.mode)}
-          <button
-            class="overflow-item"
-            class:active={activeTab === tab.mode}
-            role="menuitem"
-            data-testid="tab-{tab.mode}"
-            onclick={() => selectOverflowTab(tab.mode)}
-          >
-            {#if tab.mode === 'drafts'}
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="m18 5-2.414-2.414A2 2 0 0 0 14.172 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2"/><path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>
-              </svg>
+        <!-- Ellipsis icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+        </svg>
+        <span class="tab-label">
+          {overflowLabel}
+          {#if draftCount > 0 && !isOverflowTabActive}
+            <span class="overflow-draft-badge" data-testid="overflow-draft-badge">{draftCount}</span>
+          {/if}
+        </span>
+      </button>
+
+      {#if overflowOpen}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <!-- svelte-ignore a11y_interactive_supports_focus -->
+        <div
+          class="overflow-menu"
+          role="menu"
+          bind:this={overflowMenuEl}
+          onkeydown={handleOverflowKeydown}
+        >
+          {#each overflowTabs as tab (tab.mode)}
+            <button
+              class="overflow-item"
+              class:active={activeTab === tab.mode}
+              role="menuitem"
+              data-testid="tab-{tab.mode}"
+              onclick={() => selectOverflowTab(tab.mode)}
+            >
+              {@render icon(tab.mode, 14)}
               <span class="overflow-item-label">
-                Drafts
-                {#if draftCount > 0}
+                {tab.label}
+                {#if tab.mode === 'drafts' && draftCount > 0}
                   <span class="overflow-item-count">({draftCount})</span>
                 {/if}
               </span>
-            {:else if tab.mode === 'archived'}
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>
-              </svg>
-              <span class="overflow-item-label">Archived</span>
-            {:else if tab.mode === 'docs'}
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
-              </svg>
-              <span class="overflow-item-label">Docs</span>
-            {:else if tab.mode === 'decisions'}
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="m20 16-4-4 4-4"/><path d="M4 20V4"/><path d="m20 16H8a4 4 0 0 1 0-8h12"/>
-              </svg>
-              <span class="overflow-item-label">Decisions</span>
-            {/if}
-          </button>
-        {/each}
-      </div>
-    {/if}
-  </div>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {/if}
 
   <div class="tab-spacer"></div>
 
@@ -240,6 +254,11 @@
     gap: 0;
     flex-shrink: 0;
     align-items: stretch;
+  }
+
+  /* A narrow split editor scrolls the bar instead of cutting off tabs and actions. */
+  .tab-bar.inline {
+    overflow-x: auto;
   }
 
   .tab {

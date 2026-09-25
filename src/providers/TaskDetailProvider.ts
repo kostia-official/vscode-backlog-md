@@ -285,6 +285,7 @@ export class TaskDetailProvider {
    */
   private getHtmlContent(webview: vscode.Webview, taskTitle: string): string {
     const styleUri = this.getResourceUri(webview, 'styles.css');
+    const componentStyleUri = this.getResourceUri(webview, 'task-detail.css');
     const scriptUri = this.getResourceUri(webview, 'task-detail.js');
 
     return `<!DOCTYPE html>
@@ -294,6 +295,7 @@ export class TaskDetailProvider {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource};">
     <link href="${styleUri}" rel="stylesheet">
+    <link href="${componentStyleUri}" rel="stylesheet">
     <title>${this.escapeHtml(taskTitle)}</title>
 </head>
 <body class="task-detail-page">
