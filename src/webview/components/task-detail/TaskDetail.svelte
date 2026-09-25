@@ -8,6 +8,7 @@
   import Checklist from './Checklist.svelte';
   import MarkdownSection from './MarkdownSection.svelte';
   import ActionButtons from './ActionButtons.svelte';
+  import CollapsibleSection from './CollapsibleSection.svelte';
 
   // View state
   type ViewState = 'loading' | 'ready' | 'error';
@@ -247,30 +248,32 @@
   {/if}
 
   {#key task.id}
-    <MetaSection
-      labels={task.labels}
-      assignees={task.assignee}
-      milestone={task.milestone}
-      dependencies={task.dependencies}
-      {blocksTaskIds}
-      {missingDependencyIds}
-      {uniqueLabels}
-      {uniqueAssignees}
-      {milestones}
-      {linkableTasks}
-      {parentTask}
-      onUpdateLabels={handleUpdateLabels}
-      onUpdateAssignees={handleUpdateAssignees}
-      onUpdateMilestone={handleUpdateMilestone}
-      onRequestCreateMilestone={handleRequestCreateMilestone}
-      onOpenTask={handleOpenTask}
-      onAddBlockedByLink={handleAddBlockedByLink}
-      onAddBlocksLink={handleAddBlocksLink}
-      onRemoveBlockedByLink={handleRemoveBlockedByLink}
-      onRemoveBlocksLink={handleRemoveBlocksLink}
-      onFilterByLabel={handleFilterByLabel}
-      {isReadOnly}
-    />
+    <CollapsibleSection name="Details" hasContent={true}>
+      <MetaSection
+        labels={task.labels}
+        assignees={task.assignee}
+        milestone={task.milestone}
+        dependencies={task.dependencies}
+        {blocksTaskIds}
+        {missingDependencyIds}
+        {uniqueLabels}
+        {uniqueAssignees}
+        {milestones}
+        {linkableTasks}
+        {parentTask}
+        onUpdateLabels={handleUpdateLabels}
+        onUpdateAssignees={handleUpdateAssignees}
+        onUpdateMilestone={handleUpdateMilestone}
+        onRequestCreateMilestone={handleRequestCreateMilestone}
+        onOpenTask={handleOpenTask}
+        onAddBlockedByLink={handleAddBlockedByLink}
+        onAddBlocksLink={handleAddBlocksLink}
+        onRemoveBlockedByLink={handleRemoveBlockedByLink}
+        onRemoveBlocksLink={handleRemoveBlocksLink}
+        onFilterByLabel={handleFilterByLabel}
+        {isReadOnly}
+      />
+    </CollapsibleSection>
   {/key}
 
   {#if subtaskSummaries && subtaskSummaries.length > 0}
