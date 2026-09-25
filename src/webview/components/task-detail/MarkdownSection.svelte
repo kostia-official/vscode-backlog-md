@@ -2,6 +2,8 @@
   import { renderMermaidAction } from '../../lib/mermaidAction';
   import MarkdownEditor from '../shared/MarkdownEditor.svelte';
   import { vscode } from '../../stores/vscode.svelte';
+  import SectionToggle from './SectionToggle.svelte';
+  import { isSectionOpen, setSectionOpen, toggleSection } from '../../stores/sectionCollapse.svelte';
 
   interface Props {
     taskId: string;
@@ -26,6 +28,10 @@
   }: Props = $props();
 
   let isEditing = $state(false);
+
+  // Description is always open; every other field collapses, empty ones by default.
+  const collapsible = $derived(fieldName !== 'description');
+  const open = $derived(!collapsible || isSectionOpen(title, content !== ''));
   let prevTaskId = '';
   let suppressUpdate = false;
 
@@ -49,6 +55,7 @@
   function toggleEdit() {
     if (isReadOnly) return;
     isEditing = !isEditing;
+    if (isEditing && !open) setSectionOpen(title, true);
   }
 
   function handleViewClick() {
@@ -79,7 +86,11 @@
 
 <div class="section" data-testid="{fieldName}-section">
   <div class="section-header">
-    <div class="section-title">{title}</div>
+    {#if collapsible}
+      <SectionToggle {open} onToggle={() => toggleSection(title, content !== '')} testId="toggle-{fieldName}">{title}</SectionToggle>
+    {:else}
+      <div class="section-title">{title}</div>
+    {/if}
     <button
       class="edit-btn"
       data-testid="edit-{fieldName}-btn"
@@ -90,31 +101,33 @@
       {isEditing ? 'Done' : 'Edit'}
     </button>
   </div>
-  <div class="description-container">
-    {#if isEditing}
-      <MarkdownEditor
-        content={content}
-        placeholder="Add {title.toLowerCase()}..."
-        onUpdate={guardedUpdate}
-        onExit={() => (isEditing = false)}
-        {isReadOnly}
-      />
-    {:else}
-      <div
-        class="markdown-content description-view"
-        data-testid="{fieldName}-view"
-        onclick={handleContentClick}
-        onkeydown={(e) => e.key === 'Enter' && handleViewClick()}
-        role="button"
-        tabindex={isReadOnly ? -1 : 0}
-        use:renderMermaidAction={contentHtml}
-      >
-        {#if contentHtml}
-          {@html contentHtml}
-        {:else}
-          <em class="empty-value">{emptyLabel}</em>
-        {/if}
-      </div>
-    {/if}
-  </div>
+  {#if open}
+    <div class="description-container">
+      {#if isEditing}
+        <MarkdownEditor
+          content={content}
+          placeholder="Add {title.toLowerCase()}..."
+          onUpdate={guardedUpdate}
+          onExit={() => (isEditing = false)}
+          {isReadOnly}
+        />
+      {:else}
+        <div
+          class="markdown-content description-view"
+          data-testid="{fieldName}-view"
+          onclick={handleContentClick}
+          onkeydown={(e) => e.key === 'Enter' && handleViewClick()}
+          role="button"
+          tabindex={isReadOnly ? -1 : 0}
+          use:renderMermaidAction={contentHtml}
+        >
+          {#if contentHtml}
+            {@html contentHtml}
+          {:else}
+            <em class="empty-value">{emptyLabel}</em>
+          {/if}
+        </div>
+      {/if}
+    </div>
+  {/if}
 </div>

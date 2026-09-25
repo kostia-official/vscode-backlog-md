@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { ChecklistItem } from '../../lib/types';
+  import SectionToggle from './SectionToggle.svelte';
+  import { isSectionOpen, toggleSection } from '../../stores/sectionCollapse.svelte';
 
   interface Props {
     title: string;
@@ -43,6 +45,7 @@
   const totalCount = $derived(items.length);
   const progress = $derived(totalCount > 0 ? `${checkedCount} of ${totalCount} complete` : '');
   const isComplete = $derived(checkedCount === totalCount && totalCount > 0);
+  const open = $derived(isSectionOpen(title, items.length > 0));
 
   function reconstructAndSave(modifiedItems: Array<{ id: number; text: string; checked: boolean }>) {
     if (!onUpdateText) return;
@@ -105,7 +108,7 @@
 
 <div class="section">
   <div class="section-header">
-    <div class="section-title">{title}</div>
+    <SectionToggle {open} onToggle={() => toggleSection(title, items.length > 0)} testId="toggle-{listType}">{title}</SectionToggle>
     <div style="display: flex; align-items: center; gap: 8px;">
       {#if progress}
         <span
@@ -118,89 +121,91 @@
       {/if}
     </div>
   </div>
-  {#if items.length > 0}
-    <ul class="checklist">
-      {#each items as item (item.id)}
-        <li
-          class="checklist-item"
-          class:checked={item.checked}
-          data-list-type={listType}
-          data-item-id={item.id}
-          data-testid="{listType}-item-{item.id}"
-        >
-          <button
-            type="button"
-            class="checklist-checkbox"
-            onclick={() => !isReadOnly && onToggle(listType, item.id)}
-            aria-pressed={item.checked}
-            disabled={isReadOnly}
-            data-testid="{listType}-toggle-{item.id}"
+  {#if open}
+    {#if items.length > 0}
+      <ul class="checklist">
+        {#each items as item (item.id)}
+          <li
+            class="checklist-item"
+            class:checked={item.checked}
+            data-list-type={listType}
+            data-item-id={item.id}
+            data-testid="{listType}-item-{item.id}"
           >
-            <span class="checkbox">{item.checked ? '☑' : '☐'}</span>
-          </button>
-          {#if editingItemId === item.id}
-            <input
-              class="checklist-item-input"
-              type="text"
-              bind:value={editingText}
-              onblur={saveEdit}
-              onkeydown={handleEditKeydown}
-              data-testid="{listType}-item-input-{item.id}"
-              use:autofocusAction
-            />
-          {:else}
-            {#if onUpdateText && !isReadOnly}
-              <span
-                class="checklist-text editable"
-                onclick={() => startEditing(item)}
-                onkeydown={(e) => e.key === 'Enter' && startEditing(item)}
-                role="button"
-                tabindex={0}
-              >
-                {item.text}
-              </span>
-            {:else}
-              <span class="checklist-text">
-                {item.text}
-              </span>
-            {/if}
-          {/if}
-          {#if onUpdateText && !isReadOnly}
             <button
               type="button"
-              class="checklist-delete-btn"
-              onclick={() => deleteItem(item.id)}
-              data-testid="{listType}-delete-{item.id}"
-              title="Remove item"
+              class="checklist-checkbox"
+              onclick={() => !isReadOnly && onToggle(listType, item.id)}
+              aria-pressed={item.checked}
+              disabled={isReadOnly}
+              data-testid="{listType}-toggle-{item.id}"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <span class="checkbox">{item.checked ? '☑' : '☐'}</span>
             </button>
-          {/if}
-        </li>
-      {/each}
-    </ul>
-  {:else}
-    <span class="empty-value">None defined</span>
-  {/if}
-  {#if onUpdateText && !isReadOnly}
-    <div class="checklist-add" data-testid="{listType}-add">
-      <input
-        type="text"
-        class="checklist-add-input"
-        placeholder="Add item..."
-        bind:value={newItemText}
-        onkeydown={handleAddKeydown}
-        data-testid="{listType}-add-input"
-      />
-      <button
-        type="button"
-        class="checklist-add-btn"
-        onclick={addItem}
-        disabled={!newItemText.trim()}
-        data-testid="{listType}-add-btn"
-      >
-        Add
-      </button>
-    </div>
+            {#if editingItemId === item.id}
+              <input
+                class="checklist-item-input"
+                type="text"
+                bind:value={editingText}
+                onblur={saveEdit}
+                onkeydown={handleEditKeydown}
+                data-testid="{listType}-item-input-{item.id}"
+                use:autofocusAction
+              />
+            {:else}
+              {#if onUpdateText && !isReadOnly}
+                <span
+                  class="checklist-text editable"
+                  onclick={() => startEditing(item)}
+                  onkeydown={(e) => e.key === 'Enter' && startEditing(item)}
+                  role="button"
+                  tabindex={0}
+                >
+                  {item.text}
+                </span>
+              {:else}
+                <span class="checklist-text">
+                  {item.text}
+                </span>
+              {/if}
+            {/if}
+            {#if onUpdateText && !isReadOnly}
+              <button
+                type="button"
+                class="checklist-delete-btn"
+                onclick={() => deleteItem(item.id)}
+                data-testid="{listType}-delete-{item.id}"
+                title="Remove item"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    {:else}
+      <span class="empty-value">None defined</span>
+    {/if}
+    {#if onUpdateText && !isReadOnly}
+      <div class="checklist-add" data-testid="{listType}-add">
+        <input
+          type="text"
+          class="checklist-add-input"
+          placeholder="Add item..."
+          bind:value={newItemText}
+          onkeydown={handleAddKeydown}
+          data-testid="{listType}-add-input"
+        />
+        <button
+          type="button"
+          class="checklist-add-btn"
+          onclick={addItem}
+          disabled={!newItemText.trim()}
+          data-testid="{listType}-add-btn"
+        >
+          Add
+        </button>
+      </div>
+    {/if}
   {/if}
 </div>

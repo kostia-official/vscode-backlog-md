@@ -33,6 +33,12 @@ export class TasksPanelProvider {
     private readonly context: vscode.ExtensionContext
   ) {
     this.parser = parser;
+    // Restores the board tab (pinned or not) after a window reload.
+    context.subscriptions.push(
+      vscode.window.registerWebviewPanelSerializer('backlog.tasksEditor', {
+        deserializeWebviewPanel: async (panel) => this.adopt(panel),
+      })
+    );
   }
 
   setParser(parser: BacklogParser): void {
@@ -87,7 +93,17 @@ export class TasksPanelProvider {
         retainContextWhenHidden: true,
       }
     );
+    this.adopt(panel);
+  }
+
+  /** Wires a new or restored panel to a controller; a second panel is disposed. */
+  private adopt(panel: vscode.WebviewPanel): void {
+    if (this.panel) {
+      panel.dispose();
+      return;
+    }
     this.panel = panel;
+    panel.webview.options = { enableScripts: true, localResourceRoots: [this.extensionUri] };
 
     const host: TasksHost = {
       kind: 'editor',

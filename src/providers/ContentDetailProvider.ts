@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { BacklogParser } from '../core/BacklogParser';
 import { openWorkspaceFile, isValidLinkString } from '../core/openWorkspaceFile';
 import { parseMarkdown } from '../core/parseMarkdown';
+import { BacklogWriter } from '../core/BacklogWriter';
+import { DECISION_STATUSES } from '../core/types';
 
 /**
  * Provides a webview panel for displaying read-only document and decision details.
@@ -10,12 +12,13 @@ import { parseMarkdown } from '../core/parseMarkdown';
  * - Static panel instance (reused for sequential opens)
  * - Loads compiled Svelte bundle (content-detail.js)
  * - Data sent via postMessage
- * - Only handles "openFile" message (read-only view)
+ * - Handles opening files and links, and the decision status control
  */
 export class ContentDetailProvider {
   private static currentPanel: vscode.WebviewPanel | undefined;
   private static currentEntityId: string | undefined;
   private static currentEntityFilePath: string | undefined;
+  private readonly writer = new BacklogWriter();
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -45,7 +48,7 @@ export class ContentDetailProvider {
     ContentDetailProvider.currentEntityId = docId;
     ContentDetailProvider.currentEntityFilePath = doc.filePath;
 
-    const contentHtml = doc.content ? await parseMarkdown(doc.content) : '';
+    const contentHtml = doc.content ? await parseMarkdown(doc.content, doc.filePath) : '';
     panel.webview.postMessage({ type: 'documentData', document: doc, contentHtml });
   }
 
@@ -70,12 +73,27 @@ export class ContentDetailProvider {
 
     // Render each section to HTML
     const sections: Record<string, string> = {};
-    if (decision.context) sections.context = await parseMarkdown(decision.context);
-    if (decision.decision) sections.decision = await parseMarkdown(decision.decision);
-    if (decision.consequences) sections.consequences = await parseMarkdown(decision.consequences);
-    if (decision.alternatives) sections.alternatives = await parseMarkdown(decision.alternatives);
+    if (decision.context)
+      sections.context = await parseMarkdown(decision.context, decision.filePath);
+    if (decision.decision)
+      sections.decision = await parseMarkdown(decision.decision, decision.filePath);
+    if (decision.consequences)
+      sections.consequences = await parseMarkdown(decision.consequences, decision.filePath);
+    if (decision.alternatives)
+      sections.alternatives = await parseMarkdown(decision.alternatives, decision.filePath);
 
     panel.webview.postMessage({ type: 'decisionData', decision, sections });
+  }
+
+  private async updateDecisionStatus(decisionId: unknown, status: unknown): Promise<void> {
+    if (!this.parser || typeof decisionId !== 'string') return;
+    if (!(DECISION_STATUSES as readonly unknown[]).includes(status)) return;
+    try {
+      await this.writer.updateDecision(decisionId, { status: status as string }, this.parser);
+      await this.openDecision(decisionId);
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to update decision status: ${error}`);
+    }
   }
 
   /**
@@ -111,6 +129,8 @@ export class ContentDetailProvider {
           fragment,
           ContentDetailProvider.currentEntityFilePath
         );
+      } else if (message.type === 'updateDecisionStatus') {
+        await this.updateDecisionStatus(message.decisionId, message.status);
       }
     });
 
