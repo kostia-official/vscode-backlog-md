@@ -7,6 +7,10 @@
     isDraft?: boolean;
     isArchived?: boolean;
     isReadOnly?: boolean;
+    /** Tasks are symlinks: deleting one orphans its directory. */
+    taskHome?: boolean;
+    /** In the last status, which the CLI refuses to archive. */
+    isTerminal?: boolean;
   }
 
   let {
@@ -17,7 +21,12 @@
     isDraft = false,
     isArchived = false,
     isReadOnly = false,
+    taskHome = false,
+    isTerminal = false,
   }: Props = $props();
+
+  let canDelete = $derived(!taskHome || isDraft);
+  let canArchive = $derived(!taskHome || !isTerminal);
 </script>
 
 <div class="actions">
@@ -56,60 +65,66 @@
       </svg>
       Restore Task
     </button>
-    <button class="delete-btn" data-testid="delete-permanently-btn" onclick={onDelete}>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M3 6h18" />
-        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-      </svg>
-      Delete Permanently
-    </button>
+    {#if canDelete}
+      <button class="delete-btn" data-testid="delete-permanently-btn" onclick={onDelete}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 6h18" />
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+        </svg>
+        Delete Permanently
+      </button>
+    {/if}
   {:else if !isDraft && !isReadOnly}
-    <button class="archive-btn" data-testid="archive-btn" onclick={onArchive}>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <rect width="20" height="5" x="2" y="3" rx="1" />
-        <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
-        <path d="M10 12h4" />
-      </svg>
-      Archive Task
-    </button>
-    <button class="delete-btn" data-testid="delete-btn" onclick={onDelete}>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M3 6h18" />
-        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-      </svg>
-      Delete
-    </button>
+    {#if canArchive}
+      <button class="archive-btn" data-testid="archive-btn" onclick={onArchive}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect width="20" height="5" x="2" y="3" rx="1" />
+          <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+          <path d="M10 12h4" />
+        </svg>
+        Archive Task
+      </button>
+    {/if}
+    {#if canDelete}
+      <button class="delete-btn" data-testid="delete-btn" onclick={onDelete}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 6h18" />
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+        </svg>
+        Delete
+      </button>
+    {/if}
   {/if}
 </div>

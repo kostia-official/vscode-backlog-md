@@ -157,6 +157,16 @@ export class BacklogParser {
   }
 
   /**
+   * The project root the backlog CLI runs in: the workspace root, else the
+   * directory holding the config file, else the backlog directory's parent.
+   */
+  getProjectRoot(): string {
+    if (this.workspaceRoot) return this.workspaceRoot;
+    if (this.resolvedConfigPath) return path.dirname(this.resolvedConfigPath);
+    return path.dirname(this.backlogPath);
+  }
+
+  /**
    * Invalidate the config cache, forcing the next getConfig() call to re-read from disk.
    */
   invalidateConfigCache(): void {

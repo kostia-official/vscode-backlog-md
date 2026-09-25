@@ -76,6 +76,7 @@ export interface TaskDetailData {
   isArchived?: boolean;
   isReadOnly?: boolean;
   readOnlyReason?: string;
+  taskHome?: boolean;
   parentTask?: { id: string; title: string };
   subtaskSummaries?: Array<{ id: string; title: string; status: string }>;
 }

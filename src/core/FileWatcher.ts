@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
  * Watches the backlog folder for file changes and notifies listeners
  */
 export class FileWatcher implements vscode.Disposable {
-  private watcher: vscode.FileSystemWatcher;
+  private watchers: vscode.FileSystemWatcher[] = [];
   private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
 
   /**
@@ -14,25 +14,36 @@ export class FileWatcher implements vscode.Disposable {
 
   constructor(backlogPath: string) {
     // Watch for all markdown files in the backlog folder
-    const pattern = new vscode.RelativePattern(backlogPath, '**/*.md');
-    this.watcher = vscode.workspace.createFileSystemWatcher(pattern);
+    this.addPattern(backlogPath, '**/*.md');
+  }
+
+  /**
+   * Also watch `glob` under `base` — e.g. the task directories that the
+   * symlinks under the backlog folder point into.
+   */
+  addPattern(base: string, glob: string): void {
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(base, glob)
+    );
 
     // Forward all change events
-    this.watcher.onDidChange((uri) => {
+    watcher.onDidChange((uri) => {
       this._onDidChange.fire(uri);
     });
 
-    this.watcher.onDidCreate((uri) => {
+    watcher.onDidCreate((uri) => {
       this._onDidChange.fire(uri);
     });
 
-    this.watcher.onDidDelete((uri) => {
+    watcher.onDidDelete((uri) => {
       this._onDidChange.fire(uri);
     });
+
+    this.watchers.push(watcher);
   }
 
   dispose() {
-    this.watcher.dispose();
+    this.watchers.forEach((watcher) => watcher.dispose());
     this._onDidChange.dispose();
   }
 }

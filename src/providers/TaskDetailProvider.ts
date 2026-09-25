@@ -7,6 +7,7 @@ import { isReadOnlyTask, getReadOnlyTaskContext, type Task, type TaskSource } fr
 import { StatusCallbackRunner } from '../core/StatusCallbackRunner';
 import { openWorkspaceFile, isValidLinkString } from '../core/openWorkspaceFile';
 import { parseMarkdown } from '../core/parseMarkdown';
+import { readTaskHome } from '../core/taskHome';
 
 /**
  * Task detail data structure sent to the webview
@@ -30,6 +31,7 @@ interface TaskDetailData {
   isArchived?: boolean;
   isReadOnly?: boolean;
   readOnlyReason?: string;
+  taskHome?: boolean;
   parentTask?: { id: string; title: string };
   subtaskSummaries?: Array<{ id: string; title: string; status: string }>;
 }
@@ -440,6 +442,7 @@ export class TaskDetailProvider {
         readOnlyReason: isReadOnlyTask(task)
           ? `Task is from ${getReadOnlyTaskContext(task)} and is read-only.`
           : undefined,
+        taskHome: Boolean(readTaskHome(await this.parser!.getConfig())),
         parentTask,
         subtaskSummaries,
       };
@@ -650,8 +653,10 @@ export class TaskDetailProvider {
             TaskDetailProvider.currentTaskId,
             this.parser
           );
-          vscode.window.showInformationMessage(`Draft promoted to task: ${newTaskId}`);
-          await this.openTask(newTaskId);
+          if (newTaskId) {
+            vscode.window.showInformationMessage(`Draft promoted to task: ${newTaskId}`);
+            await this.openTask(newTaskId);
+          }
         } catch (error) {
           vscode.window.showErrorMessage(`Failed to promote draft: ${error}`);
         }
@@ -776,10 +781,18 @@ export class TaskDetailProvider {
             this.backlogPath ?? path.dirname(path.dirname(parentTask?.filePath || ''));
           if (!backlogPath) break;
 
+          // The CLI creates the subtask's directory and link, so it needs the title up front
+          let title: string | undefined;
+          if (readTaskHome(await this.parser.getConfig())) {
+            title = (await vscode.window.showInputBox({ prompt: 'Subtask title' }))?.trim();
+            if (!title) break;
+          }
+
           const result = await this.writer.createSubtask(
             message.parentTaskId,
             backlogPath,
-            this.parser
+            this.parser,
+            title
           );
 
           // Open the new subtask in the detail panel

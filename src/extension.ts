@@ -8,6 +8,7 @@ import { BacklogParser } from './core/BacklogParser';
 import { BacklogWriter } from './core/BacklogWriter';
 import { TaskCreatePanel } from './providers/TaskCreatePanel';
 import { FileWatcher } from './core/FileWatcher';
+import { readTaskHome, taskHomeGlob } from './core/taskHome';
 import { BacklogCli } from './core/BacklogCli';
 import { createDebouncedHandler } from './core/debounce';
 import type { TaskSource, DataSourceMode } from './core/types';
@@ -108,6 +109,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Initialize file watcher (only if backlog folder exists)
   if (backlogFolder) {
     fileWatcher = new FileWatcher(backlogFolder);
+    if (parser) watchTaskHome(fileWatcher, parser);
     console.log('[Backlog.md] File watcher initialized');
     context.subscriptions.push(fileWatcher);
   }
@@ -175,6 +177,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Create new parser and file watcher
     parser = new BacklogParser(root.backlogPath, root.configPath, root.workspaceFolder.uri.fsPath);
     fileWatcher = new FileWatcher(root.backlogPath);
+    watchTaskHome(fileWatcher, parser);
     context.subscriptions.push(fileWatcher);
 
     // Wire debounced refresh
@@ -753,6 +756,20 @@ export function deactivate() {
   if (workspaceStatusBarItem) {
     workspaceStatusBarItem.dispose();
   }
+}
+
+/**
+ * With `task_home`, task files are symlinks into directories outside the
+ * backlog folder; watch those real files too. Skipped when the watcher was
+ * replaced meanwhile. A change of `task_home` needs a window reload.
+ */
+function watchTaskHome(watcher: FileWatcher, parser: BacklogParser): void {
+  void parser.getConfig().then((config) => {
+    const taskHome = readTaskHome(config);
+    if (taskHome && fileWatcher === watcher) {
+      watcher.addPattern(parser.getProjectRoot(), taskHomeGlob(taskHome));
+    }
+  });
 }
 
 /**

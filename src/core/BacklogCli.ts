@@ -1,8 +1,8 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Result of CLI availability check
@@ -36,14 +36,14 @@ export class BacklogCli {
 
     try {
       // Try to find the backlog binary
-      const whichCommand = process.platform === 'win32' ? 'where backlog' : 'which backlog';
-      const { stdout: pathOutput } = await execAsync(whichCommand);
+      const whichCommand = process.platform === 'win32' ? 'where' : 'which';
+      const { stdout: pathOutput } = await execFileAsync(whichCommand, ['backlog']);
       const cliPath = pathOutput.trim().split('\n')[0]; // Take first result on Windows
 
       // Try to get version
       let version: string | undefined;
       try {
-        const { stdout: versionOutput } = await execAsync('backlog --version');
+        const { stdout: versionOutput } = await execFileAsync('backlog', ['--version']);
         version = versionOutput.trim();
       } catch {
         // Version check failed, but binary exists
@@ -82,23 +82,18 @@ export class BacklogCli {
       'Cross-branch task features require the backlog CLI. ' +
       'Showing local tasks only. Install backlog CLI or set checkActiveBranches: false in config.';
 
-    vscode.window
-      .showWarningMessage(message, 'Learn More', 'Dismiss')
-      .then((selection) => {
-        if (selection === 'Learn More') {
-          vscode.env.openExternal(vscode.Uri.parse('https://github.com/MrLesk/Backlog.md'));
-        }
-      });
+    vscode.window.showWarningMessage(message, 'Learn More', 'Dismiss').then((selection) => {
+      if (selection === 'Learn More') {
+        vscode.env.openExternal(vscode.Uri.parse('https://github.com/MrLesk/Backlog.md'));
+      }
+    });
   }
 
   /**
    * Create a status bar item showing the current data source mode
    */
   static createStatusBarItem(): vscode.StatusBarItem {
-    const statusBarItem = vscode.window.createStatusBarItem(
-      vscode.StatusBarAlignment.Right,
-      100
-    );
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusBarItem.name = 'Backlog Data Source';
     return statusBarItem;
   }
@@ -130,6 +125,20 @@ export class BacklogCli {
   }
 
   /**
+   * Run `backlog` with an argv array (no shell) and return its stdout.
+   * Throws with the CLI's stderr when it exits non-zero.
+   */
+  static async run(args: string[], cwd: string): Promise<string> {
+    try {
+      const { stdout } = await execFileAsync('backlog', args, { cwd });
+      return stdout;
+    } catch (error) {
+      const stderr = (error as { stderr?: string }).stderr?.trim();
+      throw new Error(stderr || (error as Error).message, { cause: error });
+    }
+  }
+
+  /**
    * Execute a backlog CLI command and return the result
    * @param args Command arguments
    * @param cwd Working directory
@@ -142,9 +151,7 @@ export class BacklogCli {
     }
 
     try {
-      const command = `backlog ${args.join(' ')}`;
-      const { stdout } = await execAsync(command, { cwd });
-      return stdout;
+      return await this.run(args, cwd);
     } catch (error) {
       console.error('[BacklogCli] Command execution failed:', error);
       return null;
