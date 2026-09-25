@@ -113,7 +113,8 @@ export type DocumentType = 'readme' | 'guide' | 'specification' | 'other';
 /**
  * Decision status for ADR-style decisions
  */
-export type DecisionStatus = 'proposed' | 'accepted' | 'rejected' | 'superseded';
+export const DECISION_STATUSES = ['proposed', 'accepted', 'rejected', 'superseded'] as const;
+export type DecisionStatus = (typeof DECISION_STATUSES)[number];
 
 /**
  * Represents a Backlog.md document (from backlog/docs/)
@@ -253,6 +254,7 @@ export type WebviewMessage =
   | { type: 'requestCreateMilestone' }
   | { type: 'openDocument'; documentId: string }
   | { type: 'openDecision'; decisionId: string }
+  | { type: 'createDecision' }
   | { type: 'initBacklog'; mode: 'defaults' | 'customize' }
   | { type: 'setupAgentIntegration' }
   | { type: 'dismissIntegrationBanner' };

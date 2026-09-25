@@ -37,7 +37,8 @@
     "workspaceContains:**/.backlog/tasks/*.md",
     "workspaceContains:**/.backlog/config.yml",
     "workspaceContains:**/.backlog/config.yaml",
-    "workspaceContains:backlog.config.yml"
+    "workspaceContains:backlog.config.yml",
+    "onWebviewPanel:backlog.tasksEditor"
   ],
   "main": "./dist/extension.js",
   "contributes": {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { BacklogDecision } from '../../lib/types';
   import { vscode } from '../../stores/vscode.svelte';
+  import { DECISION_STATUSES } from '../../../core/types';
 
   let {
     decisions,
@@ -10,15 +11,22 @@
 
   let searchQuery = $state('');
 
+  let statusFilter = $state<string | null>(null);
+
   let filteredDecisions = $derived(
-    searchQuery
-      ? decisions.filter(
-          (d) =>
-            d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (d.status && d.status.toLowerCase().includes(searchQuery.toLowerCase()))
-        )
-      : decisions
+    decisions
+      .filter((d) => statusFilter === null || d.status === statusFilter)
+      .filter(
+        (d) =>
+          !searchQuery ||
+          d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (d.status && d.status.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
   );
+
+  function handleCreateDecision() {
+    vscode.postMessage({ type: 'createDecision' });
+  }
 
   function handleOpenDecision(decisionId: string) {
     vscode.postMessage({ type: 'openDecision', decisionId });
@@ -42,6 +50,29 @@
 
 <div class="decisions-list">
   <div class="list-toolbar">
+    <div class="filter-row">
+      <div class="status-chips" role="group" aria-label="Filter by status">
+        <button
+          class="status-badge filter-chip status-unknown"
+          class:active={statusFilter === null}
+          aria-pressed={statusFilter === null}
+          data-testid="decision-filter-all"
+          onclick={() => (statusFilter = null)}
+        >All</button>
+        {#each DECISION_STATUSES as status (status)}
+          <button
+            class="status-badge filter-chip {getStatusBadgeClass(status)}"
+            class:active={statusFilter === status}
+            aria-pressed={statusFilter === status}
+            data-testid="decision-filter-{status}"
+            onclick={() => (statusFilter = status)}
+          >{status}</button>
+        {/each}
+      </div>
+      <button class="new-decision-btn" data-testid="new-decision-btn" onclick={handleCreateDecision}>
+        New decision
+      </button>
+    </div>
     <div class="search-wrapper">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
@@ -61,8 +92,8 @@
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="m20 16-4-4 4-4"/><path d="M4 20V4"/><path d="m20 16H8a4 4 0 0 1 0-8h12"/>
       </svg>
-      <p>{searchQuery ? 'No decisions match your search' : 'No decisions found'}</p>
-      {#if !searchQuery}
+      <p>{searchQuery || statusFilter ? 'No decisions match your filters' : 'No decisions found'}</p>
+      {#if !searchQuery && !statusFilter}
         <p class="empty-hint">Add markdown files to <code>backlog/decisions/</code> to see them here</p>
       {/if}
     </div>
@@ -107,6 +138,53 @@
   .list-toolbar {
     padding: 8px;
     border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-widget-border, #444));
+  }
+
+  .filter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .status-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .filter-chip {
+    border: 1px solid transparent;
+    font-family: inherit;
+    cursor: pointer;
+    opacity: 0.6;
+  }
+
+  .filter-chip.active {
+    opacity: 1;
+    border-color: currentColor;
+  }
+
+  .filter-chip:focus-visible,
+  .new-decision-btn:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+  }
+
+  .new-decision-btn {
+    border: none;
+    border-radius: 2px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    background: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #fff);
+  }
+
+  .new-decision-btn:hover {
+    background: var(--vscode-button-hoverBackground, #1177bb);
   }
 
   .search-wrapper {

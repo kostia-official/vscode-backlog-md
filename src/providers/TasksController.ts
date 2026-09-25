@@ -695,6 +695,20 @@ export class TasksController {
         break;
       }
 
+      case 'createDecision': {
+        if (!this.parser) break;
+        const title = (await vscode.window.showInputBox({ prompt: 'Decision title' }))?.trim();
+        if (!title) break;
+        try {
+          const { id } = await this.writer.createDecision(this.parser.getBacklogPath(), title);
+          await this.refreshDecisions();
+          vscode.commands.executeCommand('backlog.openDecisionDetail', id);
+        } catch (error) {
+          vscode.window.showErrorMessage(`Failed to create decision: ${error}`);
+        }
+        break;
+      }
+
       case 'filterByStatus': {
         vscode.commands.executeCommand('backlog.filterByStatus', message.status);
         break;

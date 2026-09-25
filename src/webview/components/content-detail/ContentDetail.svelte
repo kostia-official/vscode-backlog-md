@@ -2,6 +2,7 @@
   import type { BacklogDocument, BacklogDecision } from '../../lib/types';
   import { vscode, onMessage } from '../../stores/vscode.svelte';
   import { renderMermaidAction } from '../../lib/mermaidAction';
+  import { DECISION_STATUSES } from '../../../core/types';
 
   type ViewMode = 'document' | 'decision' | 'loading';
 
@@ -53,6 +54,12 @@
       relativePath,
       fragment: fragment ?? null,
     });
+  }
+
+  function handleStatusChange(event: Event) {
+    if (!decision) return;
+    const status = (event.currentTarget as HTMLSelectElement).value;
+    vscode.postMessage({ type: 'updateDecisionStatus', decisionId: decision.id, status });
   }
 
   function getStatusBadgeClass(status?: string): string {
@@ -134,9 +141,20 @@
       </div>
       <h1 class="detail-title">{decision.title}</h1>
       <div class="detail-meta">
-        {#if decision.status}
-          <span class="status-badge {getStatusBadgeClass(decision.status)}">{decision.status}</span>
-        {/if}
+        <select
+          class="status-badge status-select {getStatusBadgeClass(decision.status)}"
+          data-testid="decision-status-select"
+          aria-label="Decision status"
+          value={decision.status ?? ''}
+          onchange={handleStatusChange}
+        >
+          {#if !(DECISION_STATUSES as readonly string[]).includes(decision.status ?? '')}
+            <option value={decision.status ?? ''} disabled>{decision.status || 'no status'}</option>
+          {/if}
+          {#each DECISION_STATUSES as status (status)}
+            <option value={status}>{status}</option>
+          {/each}
+        </select>
         {#if decision.date}
           <span class="date-label">{decision.date}</span>
         {/if}
@@ -296,6 +314,17 @@
     border-radius: 3px;
     text-transform: capitalize;
     font-weight: 500;
+  }
+
+  .status-select {
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .status-select option {
+    background: var(--vscode-dropdown-background, #3c3c3c);
+    color: var(--vscode-dropdown-foreground, #ccc);
   }
 
   .status-accepted {

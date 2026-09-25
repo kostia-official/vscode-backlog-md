@@ -37,6 +37,7 @@ export const Uri = {
 // Window mock implementation
 export const window = {
   createWebviewPanel: vi.fn(),
+  registerWebviewPanelSerializer: vi.fn(() => ({ dispose: vi.fn() })),
   showErrorMessage: vi.fn().mockResolvedValue(undefined),
   showWarningMessage: vi.fn().mockResolvedValue(undefined),
   showInformationMessage: vi.fn().mockResolvedValue(undefined),

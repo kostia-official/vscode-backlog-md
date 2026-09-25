@@ -870,6 +870,7 @@ test.describe('Task Detail', () => {
 
   test.describe('Implementation Plan', () => {
     test('shows empty placeholder when plan is absent', async ({ page }) => {
+      await page.locator('[data-testid="toggle-implementationPlan"]').click();
       await expect(page.locator('[data-testid="implementationPlan-view"]')).toContainText(
         'No plan'
       );
@@ -916,6 +917,7 @@ test.describe('Task Detail', () => {
 
   test.describe('Implementation Notes', () => {
     test('shows empty placeholder when notes are absent', async ({ page }) => {
+      await page.locator('[data-testid="toggle-implementationNotes"]').click();
       await expect(page.locator('[data-testid="implementationNotes-view"]')).toContainText(
         'No notes'
       );
@@ -962,6 +964,7 @@ test.describe('Task Detail', () => {
   test.describe('Final Summary', () => {
     test('shows final summary section for editable tasks (even when empty)', async ({ page }) => {
       await expect(page.locator('[data-testid="finalSummary-section"]')).toBeVisible();
+      await page.locator('[data-testid="toggle-finalSummary"]').click();
       await expect(page.locator('[data-testid="finalSummary-view"]')).toContainText('No summary');
     });
 
