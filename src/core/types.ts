@@ -180,6 +180,7 @@ export interface BacklogConfig {
   timezone_preference?: string;
   include_date_time_in_dates?: boolean;
   on_status_change?: string;
+  task_home?: string;
 
   // Cross-branch config options (upstream compatibility)
   task_resolution_strategy?: TaskResolutionStrategy;

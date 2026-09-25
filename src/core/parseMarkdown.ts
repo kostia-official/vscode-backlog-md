@@ -25,7 +25,12 @@ export function addLinkTitles(html: string): string {
   });
 }
 
-export async function parseMarkdown(markdown: string): Promise<string> {
+// `sourceFilePath` is the file the markdown was read from; unused for now.
+export async function parseMarkdown(
+  markdown: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  sourceFilePath?: string
+): Promise<string> {
   const parse = await getMarkedParse();
   const safe = sanitizeMarkdownSource(markdown);
   const result = parse(safe);
