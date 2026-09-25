@@ -1194,6 +1194,7 @@ export class BacklogParser {
     // A section starts only on an exact `## Context|Decision|Consequences|Alternatives`
     // line outside a code fence; any other heading is content of the current section.
     let inFence = false;
+    const preamble: string[] = [];
     for (let i = lineIndex; i < lines.length; i++) {
       const line = lines[i];
       const trimmedLine = line.trim();
@@ -1214,12 +1215,15 @@ export class BacklogParser {
         }
       }
 
-      if (currentSection && sections[currentSection]) {
-        sections[currentSection].push(line);
-      }
+      (currentSection ? sections[currentSection] : preamble).push(line);
     }
 
-    decision.context = sections.context.join('\n').trim() || undefined;
+    // Text before the first known section opens Context rather than being dropped.
+    decision.context =
+      [preamble, sections.context]
+        .map((part) => part.join('\n').trim())
+        .filter(Boolean)
+        .join('\n\n') || undefined;
     decision.decision = sections.decision.join('\n').trim() || undefined;
     decision.consequences = sections.consequences.join('\n').trim() || undefined;
     decision.alternatives = sections.alternatives.join('\n').trim() || undefined;

@@ -66,3 +66,16 @@ describe('parseDecisionContent sections', () => {
     expect(decision.alternatives).toBe('JSON files.');
   });
 });
+
+describe('parseDecisionContent text before the first section', () => {
+  it('opens Context instead of being dropped', () => {
+    const parser = new BacklogParser('/fake/backlog');
+    const decision = parser.parseDecisionContent(
+      '# Pick a queue\n\nWe need one by Friday.\n\n## Context\n\nTwo options.\n\n## Decision\n\nRedis.\n',
+      '/fake/decisions/decision-8 - Pick-a-queue.md'
+    )!;
+    expect(decision.title).toBe('Pick a queue');
+    expect(decision.context).toBe('We need one by Friday.\n\nTwo options.');
+    expect(decision.decision).toBe('Redis.');
+  });
+});

@@ -13,6 +13,23 @@
 
   let statusFilter = $state<string | null>(null);
 
+  // Open questions first: proposed, accepted, superseded, rejected, then any other
+  // status; within a status the newest date first, then the id.
+  const STATUS_ORDER = ['proposed', 'accepted', 'superseded', 'rejected'];
+
+  function statusRank(status?: string): number {
+    const rank = STATUS_ORDER.indexOf(status ?? '');
+    return rank === -1 ? STATUS_ORDER.length : rank;
+  }
+
+  function compareDecisions(a: BacklogDecision, b: BacklogDecision): number {
+    return (
+      statusRank(a.status) - statusRank(b.status) ||
+      (b.date ?? '').localeCompare(a.date ?? '') ||
+      a.id.localeCompare(b.id, undefined, { numeric: true })
+    );
+  }
+
   let filteredDecisions = $derived(
     decisions
       .filter((d) => statusFilter === null || d.status === statusFilter)
@@ -22,6 +39,7 @@
           d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (d.status && d.status.toLowerCase().includes(searchQuery.toLowerCase()))
       )
+      .sort(compareDecisions)
   );
 
   function handleCreateDecision() {
