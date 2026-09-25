@@ -5,6 +5,7 @@ import * as yaml from 'js-yaml';
 import matter from 'gray-matter';
 import { Milestone, Task, TaskStatus } from './types';
 import { BacklogParser } from './BacklogParser';
+import { cliCreateSubtask, cliMoveTask, cliPromoteDraft, moveLink, readTaskHome } from './taskHome';
 
 /**
  * Compute an MD5 hash of file content for conflict detection
@@ -315,6 +316,7 @@ export class BacklogWriter {
    * Move a completed task to the completed/ folder
    */
   async completeTask(taskId: string, parser: BacklogParser): Promise<string> {
+    if (readTaskHome(await parser.getConfig())) return cliMoveTask(parser, taskId, 'complete');
     const destinationPath = await this.moveTaskToFolder(taskId, 'completed', parser);
     await this.sanitizeArchivedTaskLinks(taskId, parser);
     return destinationPath;
@@ -324,6 +326,7 @@ export class BacklogWriter {
    * Archive a task (cancelled/duplicate) to the archive/tasks/ folder
    */
   async archiveTask(taskId: string, parser: BacklogParser): Promise<string> {
+    if (readTaskHome(await parser.getConfig())) return cliMoveTask(parser, taskId, 'archive');
     const destinationPath = await this.moveTaskToFolder(taskId, 'archive/tasks', parser);
     await this.sanitizeArchivedTaskLinks(taskId, parser);
     return destinationPath;
@@ -345,6 +348,10 @@ export class BacklogWriter {
     if (!task) {
       throw new Error(`Task ${taskId} not found`);
     }
+    // A linked task's directory would be orphaned; drafts are plain files.
+    if (readTaskHome(await parser.getConfig()) && !/^DRAFT-/i.test(taskId)) {
+      throw new Error('Delete is disabled while task_home is set');
+    }
     fs.unlinkSync(task.filePath);
     parser.invalidateTaskCache(task.filePath);
   }
@@ -357,7 +364,8 @@ export class BacklogWriter {
     taskId: string,
     parser: BacklogParser,
     crossBranchIds?: string[]
-  ): Promise<string> {
+  ): Promise<string | undefined> {
+    if (readTaskHome(await parser.getConfig())) return cliPromoteDraft(parser, taskId);
     const task = await parser.getTask(taskId);
     if (!task) {
       throw new Error(`Task ${taskId} not found`);
@@ -411,6 +419,9 @@ export class BacklogWriter {
    * and sets status to "Draft". Mirrors upstream Backlog.md demote semantics.
    */
   async demoteTask(taskId: string, parser: BacklogParser): Promise<string> {
+    if (readTaskHome(await parser.getConfig())) {
+      throw new Error('Demote is disabled while task_home is set');
+    }
     const task = await parser.getTask(taskId);
     if (!task) {
       throw new Error(`Task ${taskId} not found`);
@@ -482,8 +493,12 @@ export class BacklogWriter {
       fs.mkdirSync(destDir, { recursive: true });
     }
 
-    // Move the file
-    fs.renameSync(task.filePath, destPath);
+    // A symlinked task moves as a link re-pointed at the same file
+    if (fs.lstatSync(task.filePath, { throwIfNoEntry: false })?.isSymbolicLink()) {
+      moveLink(task.filePath, destDir);
+    } else {
+      fs.renameSync(task.filePath, destPath);
+    }
     parser.invalidateTaskCache(task.filePath);
     parser.invalidateTaskCache(destPath);
 
@@ -827,8 +842,12 @@ export class BacklogWriter {
   async createSubtask(
     parentTaskId: string,
     backlogPath: string,
-    parser?: BacklogParser
+    parser?: BacklogParser,
+    title?: string
   ): Promise<{ id: string; filePath: string }> {
+    if (parser && readTaskHome(await parser.getConfig())) {
+      return cliCreateSubtask(parser, parentTaskId, title);
+    }
     const tasksDir = path.join(backlogPath, 'tasks');
 
     if (!fs.existsSync(tasksDir)) {

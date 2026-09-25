@@ -31,6 +31,7 @@
   let isDraft = $state(false);
   let isArchived = $state(false);
   let isReadOnly = $state(false);
+  let taskHome = $state(false);
   let readOnlyReason = $state('');
   let parentTask: { id: string; title: string } | undefined = $state(undefined);
   let subtaskSummaries: Array<{ id: string; title: string; status: string }> | undefined = $state(undefined);
@@ -57,6 +58,7 @@
           isDraft = data.isDraft ?? false;
           isArchived = data.isArchived ?? false;
           isReadOnly = data.isReadOnly ?? false;
+          taskHome = data.taskHome ?? false;
           readOnlyReason = data.readOnlyReason ?? '';
           parentTask = data.parentTask;
           subtaskSummaries = data.subtaskSummaries;
@@ -355,5 +357,7 @@
     {isDraft}
     {isArchived}
     {isReadOnly}
+    {taskHome}
+    isTerminal={task.status === statuses[statuses.length - 1]}
   />
 {/if}

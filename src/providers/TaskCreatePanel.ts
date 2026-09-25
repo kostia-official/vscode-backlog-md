@@ -196,7 +196,7 @@ export class TaskCreatePanel {
       if (milestone !== undefined) {
         updates.milestone = milestone;
       }
-      let newTaskId: string;
+      let newTaskId: string | undefined;
       if (this.draftId) {
         // Save final content to the draft, then promote it
         await this.writer.updateTask(this.draftId, updates, this.parser);
@@ -215,7 +215,7 @@ export class TaskCreatePanel {
       this.closedIntentionally = true;
       this.panel.dispose();
 
-      this.providers.taskDetailProvider.openTask(newTaskId);
+      if (newTaskId) this.providers.taskDetailProvider.openTask(newTaskId);
     } catch (error) {
       await this.panel.webview.postMessage({
         type: 'error',
