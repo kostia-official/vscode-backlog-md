@@ -235,6 +235,7 @@ export type WebviewMessage =
   | { type: 'toggleMilestoneCollapse'; milestone: string }
   | { type: 'filterByStatus'; status: string }
   | { type: 'filterByLabel'; label: string }
+  | { type: 'labelFilterApplied'; label: string }
   | { type: 'completeTask'; taskId: string }
   | { type: 'promoteDraft'; taskId: string }
   | { type: 'demoteTask'; taskId: string }
@@ -301,7 +302,7 @@ export type ExtensionMessage =
         milestones: Array<{ name: string; total: number; done: number }>;
       };
     }
-  | { type: 'configUpdated'; config: { projectName?: string } }
+  | { type: 'configUpdated'; config: { projectName?: string; labels?: string[] } }
   | { type: 'documentsUpdated'; documents: BacklogDocument[] }
   | { type: 'decisionsUpdated'; decisions: BacklogDecision[] }
   | { type: 'taskPreviewCleared' }

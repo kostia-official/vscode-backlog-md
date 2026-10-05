@@ -138,4 +138,16 @@ describe('TasksPanelProvider', () => {
       taskId: 'TASK-5',
     });
   });
+
+  it('filterByLabel reveals the open panel and posts the label to it', () => {
+    const provider = new TasksPanelProvider(extensionUri, mockParser, mockContext);
+    provider.reveal();
+    (mockWebview.postMessage as Mock).mockClear();
+    (mockPanel.reveal as Mock).mockClear();
+
+    provider.filterByLabel('bug');
+
+    expect(mockPanel.reveal).toHaveBeenCalled();
+    expect(mockWebview.postMessage).toHaveBeenCalledWith({ type: 'setLabelFilter', label: 'bug' });
+  });
 });

@@ -1300,7 +1300,7 @@ describe('TasksViewProvider', () => {
   });
 
   describe('handleMessage filterByStatus', () => {
-    it('should execute backlog.filterByStatus command', async () => {
+    it('should filter this board by status without a command', async () => {
       const provider = new TasksViewProvider(extensionUri, mockParser, mockContext);
       resolveView(provider);
 
@@ -1308,13 +1308,17 @@ describe('TasksViewProvider', () => {
         .calls[0][0];
       await messageHandler({ type: 'filterByStatus', status: 'To Do' });
 
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+      expect(mockWebview.postMessage).toHaveBeenCalledWith({
+        type: 'setFilter',
+        filter: 'status:To Do',
+      });
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
         'backlog.filterByStatus',
         'To Do'
       );
     });
 
-    it('should execute backlog.filterByStatus with In Progress status', async () => {
+    it('should filter this board by In Progress status', async () => {
       const provider = new TasksViewProvider(extensionUri, mockParser, mockContext);
       resolveView(provider);
 
@@ -1322,7 +1326,11 @@ describe('TasksViewProvider', () => {
         .calls[0][0];
       await messageHandler({ type: 'filterByStatus', status: 'In Progress' });
 
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+      expect(mockWebview.postMessage).toHaveBeenCalledWith({
+        type: 'setFilter',
+        filter: 'status:In Progress',
+      });
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
         'backlog.filterByStatus',
         'In Progress'
       );
@@ -1343,7 +1351,7 @@ describe('TasksViewProvider', () => {
 
       expect(mockWebview.postMessage).toHaveBeenCalledWith({
         type: 'configUpdated',
-        config: { projectName: 'My Project' },
+        config: { projectName: 'My Project', labels: [] },
       });
     });
 
@@ -1358,7 +1366,7 @@ describe('TasksViewProvider', () => {
 
       expect(mockWebview.postMessage).toHaveBeenCalledWith({
         type: 'configUpdated',
-        config: { projectName: undefined },
+        config: { projectName: undefined, labels: [] },
       });
     });
   });

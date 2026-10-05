@@ -8,6 +8,7 @@
   } from '../../lib/types';
   import { formatStoredUtcDateForDisplay } from '../../lib/date-display';
   import { renderMermaidAction } from '../../lib/mermaidAction';
+  import LabelChip from '../shared/LabelChip.svelte';
 
   type TaskWithBlocks = Task & { blocksTaskIds?: string[] };
   type SubtaskSummary = {
@@ -171,7 +172,7 @@
         {#if task.labels.length > 0}
           <div class="compact-meta-line">
             <span class="compact-meta-key">Labels</span>
-            <span class="compact-meta-value">{task.labels.join(', ')}</span>
+            <span class="compact-meta-value">{#each task.labels as label (label)}<LabelChip {label} />{/each}</span>
           </div>
         {/if}
         {#if task.assignee.length > 0}

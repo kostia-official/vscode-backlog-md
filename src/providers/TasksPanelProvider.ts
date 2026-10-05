@@ -74,6 +74,12 @@ export class TasksPanelProvider {
     return this.panel !== undefined;
   }
 
+  /** Reveal the open board and add the label to its filter. */
+  filterByLabel(label: string): void {
+    this.reveal();
+    this.controller?.filterByLabel(label);
+  }
+
   /**
    * Open the Tasks board in an editor tab, or reveal the existing one.
    */

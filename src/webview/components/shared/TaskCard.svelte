@@ -8,6 +8,7 @@
   import { formatTaskIdForDisplay } from '../../lib/taskIdDisplay';
   import { selectOnFocus } from '../../lib/selectOnFocus';
   import PriorityIcon from './PriorityIcon.svelte';
+  import LabelChip from './LabelChip.svelte';
 
   interface Props {
     task: Task & { blocksTaskIds?: string[]; subtaskProgress?: { total: number; done: number } };
@@ -126,7 +127,7 @@
       <PriorityIcon priority={task.priority} size={14} />
     {/if}
     {#each displayLabels as label (label)}
-      <span class="task-label">{label}</span>
+      <LabelChip {label} />
     {/each}
     {#if isReadOnlyTask(task)}
       <span

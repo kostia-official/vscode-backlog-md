@@ -3,6 +3,7 @@
   import { onMessage, vscode } from '../../stores/vscode.svelte';
   import type { Task, TaskPriority } from '../../lib/types';
   import CompactTaskDetails from './CompactTaskDetails.svelte';
+  import { setAddLabel } from '../shared/LabelChip.svelte';
 
   type TaskWithBlocks = Task & { blocksTaskIds?: string[] };
   type SubtaskSummary = {
@@ -21,6 +22,8 @@
   let notesHtml = $state('');
   let finalSummaryHtml = $state('');
   let subtaskSummaries = $state<SubtaskSummary[]>([]);
+
+  setAddLabel((label) => vscode.postMessage({ type: 'filterByLabel', label }));
 
   onMessage((message) => {
     switch (message.type) {

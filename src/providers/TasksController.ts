@@ -69,6 +69,9 @@ export class TasksController {
   private collapsedColumns: Set<string> = new Set();
   private collapsedMilestones: Set<string> = new Set();
   private activeEditedTaskId: string | null = null;
+  // Re-posted on each refresh until the webview acknowledges it, so a webview that was
+  // hidden or not yet loaded still gets the label from a chip clicked elsewhere.
+  private pendingLabel: string | null = null;
   private readonly writer = new BacklogWriter();
   private workspaceRoot: string | undefined;
   private onSelectTask?: (taskRef: TaskSelectionRef) => void | Promise<void>;
@@ -200,7 +203,7 @@ export class TasksController {
       const config = await this.parser.getConfig();
       this.host.postMessage({
         type: 'configUpdated',
-        config: { projectName: config.project_name },
+        config: { projectName: config.project_name, labels: config.labels ?? [] },
       });
       this.host.postMessage({ type: 'settingsUpdated', settings: this.getTasksViewSettings() });
 
@@ -308,6 +311,9 @@ export class TasksController {
       this.host.postMessage({ type: 'statusesUpdated', statuses });
       this.host.postMessage({ type: 'milestonesUpdated', milestones });
       this.host.postMessage({ type: 'tasksUpdated', tasks: tasksWithBlocks });
+      if (this.pendingLabel) {
+        this.host.postMessage({ type: 'setLabelFilter', label: this.pendingLabel });
+      }
 
       // Send draft count for tab badge
       const draftCount = this.viewMode === 'drafts' ? tasks.length : draftCountFromFolder;
@@ -710,7 +716,13 @@ export class TasksController {
       }
 
       case 'filterByStatus': {
-        vscode.commands.executeCommand('backlog.filterByStatus', message.status);
+        this.setViewMode('list');
+        this.setFilter(message.status ? `status:${message.status}` : 'all');
+        break;
+      }
+
+      case 'labelFilterApplied': {
+        if (this.pendingLabel === message.label) this.pendingLabel = null;
         break;
       }
 
@@ -889,9 +901,11 @@ export class TasksController {
   }
 
   /**
-   * Set the label filter in the list view from external command
+   * Add a label to the board's label filter; tabs other than kanban and list switch to list
    */
-  setLabelFilter(label: string): void {
+  filterByLabel(label: string): void {
+    if (this.viewMode !== 'kanban' && this.viewMode !== 'list') this.setViewMode('list');
+    this.pendingLabel = label;
     this.host.postMessage({ type: 'setLabelFilter', label });
   }
 

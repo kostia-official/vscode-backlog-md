@@ -151,6 +151,9 @@ export class TaskPreviewViewProvider extends BaseViewProvider {
           branch: message.branch,
         });
         return;
+      case 'filterByLabel':
+        await vscode.commands.executeCommand('backlog.filterByLabel', message.label);
+        return;
       case 'openWorkspaceFile': {
         if (!isValidLinkString(message.relativePath)) return;
         const fragment = message.fragment ?? null;

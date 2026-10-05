@@ -11,6 +11,8 @@
   import { selectOnFocus } from '../../lib/selectOnFocus';
   import { compareByOrdinal, calculateOrdinalsForDrop, type CardData } from '../../../core/ordinalUtils';
   import PriorityIcon from '../shared/PriorityIcon.svelte';
+  import LabelFilter from '../shared/LabelFilter.svelte';
+  import LabelChip from '../shared/LabelChip.svelte';
 
   type TaskWithBlocks = Task & { blocksTaskIds?: string[] };
 
@@ -22,7 +24,8 @@
     activeEditedTaskId?: string | null;
     currentFilter: string;
     currentMilestone: string;
-    currentLabel: string;
+    labels: string[];
+    selectedLabels: string[];
     currentPriority: string;
     searchQuery: string;
     isDraftsView?: boolean;
@@ -31,7 +34,7 @@
     onOpenTask: (taskId: string, taskMeta?: Pick<Task, 'filePath' | 'source' | 'branch'>) => void;
     onFilterChange: (filter: string) => void;
     onMilestoneChange: (milestone: string) => void;
-    onLabelChange: (label: string) => void;
+    onLabelsChange: (next: string[]) => void;
     onPriorityChange: (priority: string) => void;
     onSearchChange: (query: string) => void;
     onReorderTasks?: (updates: Array<{ taskId: string; ordinal: number }>) => void;
@@ -46,7 +49,8 @@
     activeEditedTaskId = null,
     currentFilter,
     currentMilestone,
-    currentLabel,
+    labels,
+    selectedLabels,
     currentPriority,
     searchQuery,
     isDraftsView = false,
@@ -55,7 +59,7 @@
     onOpenTask,
     onFilterChange,
     onMilestoneChange,
-    onLabelChange,
+    onLabelsChange,
     onPriorityChange,
     onSearchChange,
     onReorderTasks,
@@ -82,9 +86,6 @@
     // filePath is unique across local and cross-branch task sources.
     return task.filePath || `${task.id}:${task.source ?? 'local'}:${task.branch ?? ''}`;
   }
-
-  // Get unique labels from tasks (for dropdown)
-  let allLabels = $derived([...new Set(tasks.flatMap((t) => t.labels))].sort());
 
   // Get unique milestones from tasks (for dropdown)
   let taskMilestones = $derived([...new Set(tasks.map((t) => t.milestone).filter(Boolean))] as string[]);
@@ -126,8 +127,8 @@
       filtered = filtered.filter((t) => t.milestone === currentMilestone);
     }
 
-    if (currentLabel) {
-      filtered = filtered.filter((t) => t.labels.includes(currentLabel));
+    if (selectedLabels.length) {
+      filtered = filtered.filter((t) => t.labels.some((l) => selectedLabels.includes(l)));
     }
 
     if (currentPriority) {
@@ -451,19 +452,7 @@
           <option value={milestone}>{milestoneLabels.get(milestone) || milestone}</option>
         {/each}
       </select>
-      {#if allLabels.length > 0}
-        <select
-          class="label-filter"
-          value={currentLabel}
-          onchange={(e) => onLabelChange((e.target as HTMLSelectElement).value)}
-          data-testid="label-filter"
-        >
-          <option value="">All Labels</option>
-          {#each allLabels as label (label)}
-            <option value={label}>{label}</option>
-          {/each}
-        </select>
-      {/if}
+      <LabelFilter {labels} selected={selectedLabels} onChange={onLabelsChange} />
       <select
         class="priority-filter"
         value={currentPriority}
@@ -608,7 +597,7 @@
                 {#if task.labels.length > 0}
                   <span class="row-labels" data-testid="row-labels-{task.id}">
                     {#each task.labels as label (label)}
-                      <span class="task-label">{label}</span>
+                      <LabelChip {label} />
                     {/each}
                   </span>
                 {/if}

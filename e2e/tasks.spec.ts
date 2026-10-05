@@ -953,51 +953,77 @@ test.describe('Tasks View', () => {
       await page.waitForTimeout(100);
     }
 
-    test('label filter dropdown populates with unique sorted labels', async ({ page }) => {
+    const labelOptions = (page: ReturnType<typeof test.info>['page']) =>
+      page.locator('[data-testid="label-filter"] [data-testid^="label-filter-option-"]');
+    async function checkLabel(page: ReturnType<typeof test.info>['page'], label: string) {
+      const filter = page.locator('[data-testid="label-filter"]');
+      if (!(await filter.evaluate((el) => (el as HTMLDetailsElement).open))) {
+        await filter.locator('summary').click();
+      }
+      await page.locator(`[data-testid="label-filter-option-${label}"]`).check();
+    }
+
+    test('label filter lists config and task labels, sorted, after the milestone filter', async ({
+      page,
+    }) => {
       await setupLabelView(page);
+      await postMessageToWebview(page, { type: 'configUpdated', config: { labels: ['docs'] } });
 
       const labelFilter = page.locator('[data-testid="label-filter"]');
       await expect(labelFilter).toBeVisible();
+      await expect(labelFilter.locator('summary')).toHaveText('All Labels');
+      expect(
+        await page
+          .locator('[data-testid="milestone-filter"]')
+          .evaluate((el) => (el.nextElementSibling as HTMLElement | null)?.dataset.testid)
+      ).toBe('label-filter');
 
-      // Should have "All Labels" + 5 unique labels (bug, devops, feature, infra, ui)
-      const options = labelFilter.locator('option');
-      await expect(options).toHaveCount(6);
-      await expect(options.nth(0)).toHaveText('All Labels');
-      await expect(options.nth(1)).toHaveText('bug');
-      await expect(options.nth(2)).toHaveText('devops');
-      await expect(options.nth(3)).toHaveText('feature');
-      await expect(options.nth(4)).toHaveText('infra');
-      await expect(options.nth(5)).toHaveText('ui');
+      await labelFilter.locator('summary').click();
+      const ids = await labelOptions(page).evaluateAll((els) =>
+        els.map((el) => (el as HTMLElement).dataset.testid)
+      );
+      expect(ids).toEqual(
+        ['bug', 'devops', 'docs', 'feature', 'infra', 'ui'].map((l) => `label-filter-option-${l}`)
+      );
     });
 
-    test('selecting a label filters tasks correctly', async ({ page }) => {
+    test('checking two labels shows rows with either (OR)', async ({ page }) => {
       await setupLabelView(page);
-
       // Default "not-done" filter hides Done tasks, so 3 visible initially
       await expect(page.locator('tbody tr')).toHaveCount(3);
 
-      // Filter by "ui" label - should show TASK-L2 and TASK-L3
-      await page.locator('[data-testid="label-filter"]').selectOption('ui');
-      await page.waitForTimeout(50);
+      await checkLabel(page, 'bug');
+      await expect(page.locator('tbody tr')).toHaveCount(1);
+      await checkLabel(page, 'devops');
 
-      const rows = page.locator('tbody tr');
-      await expect(rows).toHaveCount(2);
+      await expect(page.locator('tbody tr')).toHaveCount(2);
+      await expect(page.locator('[data-testid="task-row-TASK-L1"]')).toBeVisible();
       await expect(page.locator('[data-testid="task-row-TASK-L2"]')).toBeVisible();
-      await expect(page.locator('[data-testid="task-row-TASK-L3"]')).toBeVisible();
+      const summary = page.locator('[data-testid="label-filter"] summary');
+      await expect(summary).toHaveText('bug, devops');
+      await expect(summary).toHaveAttribute('title', 'bug, devops');
+      // Toggling a checkbox keeps the dropdown open
+      await expect(page.locator('[data-testid="label-filter"]')).toHaveAttribute('open', '');
     });
 
-    test('selecting "All Labels" resets the filter', async ({ page }) => {
+    test('"All Labels" clears the selection and closes the dropdown', async ({ page }) => {
       await setupLabelView(page);
-
-      // Filter by "bug"
-      await page.locator('[data-testid="label-filter"]').selectOption('bug');
-      await page.waitForTimeout(50);
+      await checkLabel(page, 'bug');
       await expect(page.locator('tbody tr')).toHaveCount(1);
 
-      // Reset to all labels (still under "not-done" status filter, so 3 tasks)
-      await page.locator('[data-testid="label-filter"]').selectOption('');
-      await page.waitForTimeout(50);
+      await page.locator('[data-testid="label-filter-clear"]').click();
+
       await expect(page.locator('tbody tr')).toHaveCount(3);
+      await expect(page.locator('[data-testid="label-filter"]')).not.toHaveAttribute('open', '');
+      await expect(page.locator('[data-testid="label-filter"] summary')).toHaveText('All Labels');
+    });
+
+    test('unchecking the last label clears the filter', async ({ page }) => {
+      await setupLabelView(page);
+      await checkLabel(page, 'bug');
+      await page.locator('[data-testid="label-filter-option-bug"]').uncheck();
+      await expect(page.locator('tbody tr')).toHaveCount(3);
+      await expect(page.locator('[data-testid="label-filter"] summary')).toHaveText('All Labels');
     });
 
     test('label pills are visible on rows with labels', async ({ page }) => {
@@ -1019,21 +1045,21 @@ test.describe('Tasks View', () => {
       await expect(page.locator('[data-testid="row-labels-TASK-L4"]')).toHaveCount(0);
     });
 
-    test('setLabelFilter message sets the label dropdown value', async ({ page }) => {
+    test('setLabelFilter adds to the selection and acknowledges it', async ({ page }) => {
       await setupLabelView(page);
+      await checkLabel(page, 'devops');
+      await clearPostedMessages(page);
 
-      // Send setLabelFilter message (as if from task detail clickable label)
+      // As if from a task detail label link
       await postMessageToWebview(page, { type: 'setLabelFilter', label: 'bug' });
-      await page.waitForTimeout(50);
 
-      // Label dropdown should be set to "bug"
-      const labelFilter = page.locator('[data-testid="label-filter"]');
-      await expect(labelFilter).toHaveValue('bug');
-
-      // Only TASK-L2 has "bug" label
-      const rows = page.locator('tbody tr');
-      await expect(rows).toHaveCount(1);
-      await expect(page.locator('[data-testid="task-row-TASK-L2"]')).toBeVisible();
+      await expect(page.locator('[data-testid="label-filter-option-bug"]')).toBeChecked();
+      await expect(page.locator('[data-testid="label-filter-option-devops"]')).toBeChecked();
+      await expect(page.locator('tbody tr')).toHaveCount(2);
+      expect(await getPostedMessages(page)).toContainEqual({
+        type: 'labelFilterApplied',
+        label: 'bug',
+      });
     });
 
     test('setLabelFilter message switches to list view and filters', async ({ page }) => {

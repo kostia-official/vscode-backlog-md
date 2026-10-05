@@ -116,6 +116,27 @@ describe('TaskPreviewViewProvider', () => {
     });
   });
 
+  it('forwards filterByLabel messages from the preview to backlog.filterByLabel', async () => {
+    const provider = new TaskPreviewViewProvider(
+      extensionUri,
+      parser,
+      createMockExtensionContext() as unknown as vscode.ExtensionContext
+    );
+    provider.resolveWebviewView(
+      webviewView as unknown as vscode.WebviewView,
+      {} as vscode.WebviewViewResolveContext,
+      {
+        isCancellationRequested: false,
+        onCancellationRequested: vi.fn(),
+      } as vscode.CancellationToken
+    );
+    const handler = webview.onDidReceiveMessage.mock.calls[0]?.[0];
+
+    await handler({ type: 'filterByLabel', label: 'ui' });
+
+    expect(vscode.commands.executeCommand).toHaveBeenCalledWith('backlog.filterByLabel', 'ui');
+  });
+
   it('handles selectTask messages by refreshing preview selection in place', async () => {
     (parser.getTask as ReturnType<typeof vi.fn>).mockImplementation(async (taskId: string) => ({
       id: taskId,

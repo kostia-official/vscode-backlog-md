@@ -20,6 +20,7 @@
     collapsedMilestones: Set<string>;
     taskIdDisplay: TaskIdDisplayMode;
     activeEditedTaskId?: string | null;
+    selectedLabels?: string[];
     onSelectTask: (taskId: string, taskMeta?: Pick<Task, 'filePath' | 'source' | 'branch'>) => void;
     onOpenTask: (taskId: string, taskMeta?: Pick<Task, 'filePath' | 'source' | 'branch'>) => void;
     onToggleColumnCollapse: (status: string) => void;
@@ -44,6 +45,7 @@
     collapsedMilestones,
     taskIdDisplay,
     activeEditedTaskId = null,
+    selectedLabels = [],
     onSelectTask,
     onOpenTask,
     onToggleColumnCollapse,
@@ -56,6 +58,10 @@
 
   // Filter out subtasks (they are represented by progress on parent cards)
   let topLevelTasks = $derived(tasks.filter((t) => !t.parentTaskId));
+  // Label filter (OR); the empty-backlog message still reads the unfiltered list.
+  let shownTasks = $derived(
+    selectedLabels.length ? topLevelTasks.filter((t) => t.labels.some((l) => selectedLabels.includes(l))) : topLevelTasks
+  );
 
   // Group tasks by milestone
   let milestoneGroups = $derived.by(() => {
@@ -63,7 +69,7 @@
     const uncategorized: TaskWithBlocks[] = [];
     const milestoneLabels = new Map(configMilestones.map((milestone) => [milestone.id, milestone.name]));
 
-    for (const task of topLevelTasks) {
+    for (const task of shownTasks) {
       if (task.milestone) {
         (milestoneMap[task.milestone] ??= []).push(task);
       } else {
@@ -183,7 +189,7 @@
 {:else}
   <div class="kanban-board">
     {#each columns as col (col.status)}
-      {@const columnTasks = topLevelTasks.filter((t) => t.status.toLowerCase() === col.status.toLowerCase())}
+      {@const columnTasks = shownTasks.filter((t) => t.status.toLowerCase() === col.status.toLowerCase())}
       <KanbanColumn
         status={col.status}
         label={col.label}

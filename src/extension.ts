@@ -363,11 +363,12 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register filter by label command (used by task detail clickable labels)
   context.subscriptions.push(
-    vscode.commands.registerCommand('backlog.filterByLabel', (label: string) => {
-      // Switch to list view and apply label filter
-      tasksProvider.setViewMode('list');
-      vscode.commands.executeCommand('setContext', 'backlog.viewMode', 'list');
-      tasksProvider.setLabelFilter(label);
+    vscode.commands.registerCommand('backlog.filterByLabel', async (label: string) => {
+      // The board the user sees is the editor tab when open, else the sidebar,
+      // which must be focused to have a webview that receives the label.
+      if (tasksPanelProvider.isOpen()) return tasksPanelProvider.filterByLabel(label);
+      await vscode.commands.executeCommand('backlog.kanban.focus');
+      tasksProvider.filterByLabel(label);
     })
   );
 

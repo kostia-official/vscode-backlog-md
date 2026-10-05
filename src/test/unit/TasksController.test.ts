@@ -94,12 +94,73 @@ describe('TasksController', () => {
     expect(posted).toContainEqual({ type: 'viewModeChanged', viewMode: 'list' });
   });
 
-  it('setFilter and setLabelFilter post their messages', () => {
+  it('setFilter and filterByLabel post their messages', () => {
     const controller = new TasksController(host, mockParser, mockContext);
     controller.setFilter('status:To Do');
-    controller.setLabelFilter('bug');
+    controller.filterByLabel('bug');
     expect(posted).toContainEqual({ type: 'setFilter', filter: 'status:To Do' });
     expect(posted).toContainEqual({ type: 'setLabelFilter', label: 'bug' });
+  });
+
+  describe('label filter', () => {
+    const labelPosts = () => posted.filter((m) => m.type === 'setLabelFilter');
+
+    it('filterByLabel from the dashboard switches to list', () => {
+      const controller = new TasksController(host, mockParser, mockContext);
+      controller.setViewMode('dashboard');
+      posted = [];
+      controller.filterByLabel('bug');
+      expect(posted).toContainEqual({ type: 'activeTabChanged', tab: 'list' });
+    });
+
+    it('filterByLabel on kanban stays on kanban', () => {
+      const controller = new TasksController(host, mockParser, mockContext);
+      controller.setViewMode('kanban');
+      posted = [];
+      controller.filterByLabel('bug');
+      expect(postedTypes()).not.toContain('activeTabChanged');
+      expect(labelPosts()).toEqual([{ type: 'setLabelFilter', label: 'bug' }]);
+    });
+
+    it('re-posts the label on each refresh until the webview acknowledges it', async () => {
+      const controller = new TasksController(host, mockParser, mockContext);
+      controller.setViewMode('kanban');
+      controller.filterByLabel('bug');
+      await controller.refresh();
+      await controller.refresh();
+      expect(labelPosts()).toHaveLength(3);
+
+      await controller.handleMessage({ type: 'labelFilterApplied', label: 'bug' });
+      posted = [];
+      await controller.refresh();
+      expect(labelPosts()).toEqual([]);
+    });
+
+    it('a filterByStatus message filters this same board and runs no command', async () => {
+      const controller = new TasksController(host, mockParser, mockContext);
+      controller.setViewMode('dashboard');
+      posted = [];
+      await controller.handleMessage({ type: 'filterByStatus', status: 'To Do' });
+      expect(posted).toContainEqual({ type: 'activeTabChanged', tab: 'list' });
+      expect(posted).toContainEqual({ type: 'setFilter', filter: 'status:To Do' });
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+        'backlog.filterByStatus',
+        expect.anything()
+      );
+    });
+
+    it('configUpdated carries the config labels', async () => {
+      (mockParser.getConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+        project_name: 'P',
+        labels: ['docs', 'bug'],
+      });
+      const controller = new TasksController(host, mockParser, mockContext);
+      await controller.refresh();
+      expect(posted).toContainEqual({
+        type: 'configUpdated',
+        config: { projectName: 'P', labels: ['docs', 'bug'] },
+      });
+    });
   });
 
   it('setActiveEditedTaskId posts activeEditedTaskChanged', () => {

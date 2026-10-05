@@ -7,6 +7,8 @@
   import DocumentsList from '../docs/DocumentsList.svelte';
   import DecisionsList from '../decisions/DecisionsList.svelte';
   import TabBar from '../shared/TabBar.svelte';
+  import KanbanToolbar from '../kanban/KanbanToolbar.svelte';
+  import { setAddLabel } from '../shared/LabelChip.svelte';
   import AgentSetupBanner from '../shared/AgentSetupBanner.svelte';
   import Toast from '../shared/Toast.svelte';
   import KeyboardShortcutsPopup from '../shared/KeyboardShortcutsPopup.svelte';
@@ -46,7 +48,9 @@
   // List view state
   let currentFilter = $state('not-done');
   let currentMilestone = $state('');
-  let currentLabel = $state('');
+  let selectedLabels = $state<string[]>([]);
+  let configLabels = $state<string[]>([]);
+  let allLabels = $derived([...new Set([...configLabels, ...tasks.flatMap((t) => t.labels)])].sort());
   let currentPriority = $state('');
   let searchQuery = $state('');
 
@@ -151,10 +155,10 @@
         break;
 
       case 'setLabelFilter':
-        currentLabel = message.label;
+        addLabel(message.label);
         currentFilter = 'not-done';
+        vscode.postMessage({ type: 'labelFilterApplied', label: message.label });
         break;
-
 
       case 'draftCountUpdated':
         draftCount = message.count;
@@ -182,6 +186,7 @@
 
       case 'configUpdated':
         projectName = message.config?.projectName;
+        configLabels = message.config?.labels ?? [];
         break;
 
       case 'integrationBannerState':
@@ -424,9 +429,14 @@
     searchQuery = query;
   }
 
-  function handleLabelChange(label: string) {
-    currentLabel = label;
+  function handleLabelsChange(next: string[]) {
+    selectedLabels = next;
   }
+
+  function addLabel(label: string) {
+    if (!selectedLabels.includes(label)) selectedLabels = [...selectedLabels, label];
+  }
+  setAddLabel(addLabel);
 
   function handlePriorityChange(priority: string) {
     currentPriority = priority;
@@ -482,26 +492,13 @@
   </div>
 {:else if activeTab === 'kanban'}
   <div id="kanban-view" class="view-content">
-    <div class="kanban-toolbar">
-      <div class="grouping-toggle">
-        <button
-          class="grouping-btn"
-          class:active={!milestoneGrouping}
-          data-grouping="none"
-          onclick={() => handleToggleMilestoneGrouping(false)}
-        >
-          All Tasks
-        </button>
-        <button
-          class="grouping-btn"
-          class:active={milestoneGrouping}
-          data-grouping="milestone"
-          onclick={() => handleToggleMilestoneGrouping(true)}
-        >
-          By Milestone
-        </button>
-      </div>
-    </div>
+    <KanbanToolbar
+      {milestoneGrouping}
+      onToggleGrouping={handleToggleMilestoneGrouping}
+      labels={allLabels}
+      selected={selectedLabels}
+      onLabelsChange={handleLabelsChange}
+    />
     <div id="kanban-app">
       <KanbanBoard
         {tasks}
@@ -512,6 +509,7 @@
         {collapsedMilestones}
         {taskIdDisplay}
         {activeEditedTaskId}
+        {selectedLabels}
         onSelectTask={handleSelectTask}
         onOpenTask={handleOpenTask}
         onToggleColumnCollapse={handleToggleColumnCollapse}
@@ -533,7 +531,8 @@
       {activeEditedTaskId}
       {currentFilter}
       {currentMilestone}
-      {currentLabel}
+      labels={allLabels}
+      {selectedLabels}
       {currentPriority}
       {searchQuery}
       isDraftsView={activeTab === 'drafts'}
@@ -541,7 +540,7 @@
       onOpenTask={handleOpenTask}
       onFilterChange={handleFilterChange}
       onMilestoneChange={handleMilestoneChange}
-      onLabelChange={handleLabelChange}
+      onLabelsChange={handleLabelsChange}
       onPriorityChange={handlePriorityChange}
       onSearchChange={handleSearchChange}
       onReorderTasks={handleReorderTasks}
@@ -558,7 +557,8 @@
       {activeEditedTaskId}
       {currentFilter}
       {currentMilestone}
-      {currentLabel}
+      labels={allLabels}
+      {selectedLabels}
       {currentPriority}
       {searchQuery}
       isArchivedView={true}
@@ -566,7 +566,7 @@
       onOpenTask={handleOpenTask}
       onFilterChange={handleFilterChange}
       onMilestoneChange={handleMilestoneChange}
-      onLabelChange={handleLabelChange}
+      onLabelsChange={handleLabelsChange}
       onPriorityChange={handlePriorityChange}
       onSearchChange={handleSearchChange}
     />

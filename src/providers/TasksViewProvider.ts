@@ -63,8 +63,8 @@ export class TasksViewProvider implements vscode.WebviewViewProvider {
     this.controller.setFilter(filter);
   }
 
-  setLabelFilter(label: string): void {
-    this.controller.setLabelFilter(label);
+  filterByLabel(label: string): void {
+    this.controller.filterByLabel(label);
   }
 
   checkAndSendIntegrationState(): Promise<void> {

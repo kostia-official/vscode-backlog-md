@@ -128,8 +128,19 @@ test.describe('Task Preview Panel', () => {
       await expect(priorityChip).toHaveAttribute('title', 'High');
     });
 
-    test('displays labels', async ({ page }) => {
-      await expect(page.locator('.compact-meta-lines')).toContainText('ui, feature');
+    test('displays labels as chips', async ({ page }) => {
+      await expect(page.locator('.compact-meta-lines [data-testid="label-chip-ui"]')).toBeVisible();
+      await expect(
+        page.locator('.compact-meta-lines [data-testid="label-chip-feature"]')
+      ).toBeVisible();
+    });
+
+    test('a label chip posts filterByLabel and no selectTask', async ({ page }) => {
+      await clearPostedMessages(page);
+      await page.locator('[data-testid="label-chip-ui"]').click();
+      const messages = await getPostedMessages(page);
+      expect(messages).toContainEqual({ type: 'filterByLabel', label: 'ui' });
+      expect(messages.some((m) => m.type === 'selectTask')).toBe(false);
     });
 
     test('displays assignees', async ({ page }) => {
