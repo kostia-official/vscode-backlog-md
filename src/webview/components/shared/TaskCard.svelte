@@ -45,7 +45,12 @@
     onOpenTask(task.id, { filePath: task.filePath, source: task.source, branch: task.branch });
   }
 
+  // A press focuses the card before a drag can start, and selecting on that focus
+  // opens the detail tab over the editor-tab board. The click that ends a press selects.
+  let pressed = false;
+
   function handleFocus() {
+    if (pressed) return;
     onSelectTask(task.id, { filePath: task.filePath, source: task.source, branch: task.branch });
   }
 
@@ -106,6 +111,9 @@
   onclick={handleClick}
   ondblclick={handleDoubleClick}
   onfocus={handleFocus}
+  onpointerdown={() => (pressed = true)}
+  onpointercancel={() => (pressed = false)}
+  onblur={() => (pressed = false)}
   onkeydown={handleKeydown}
   ondragstart={handleDragStart}
   ondragend={handleDragEnd}

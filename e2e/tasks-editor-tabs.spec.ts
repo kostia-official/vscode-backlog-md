@@ -1,12 +1,15 @@
 /**
- * The editor-tab board (`tasks-editor-page`) shows every view as a tab, with no "More" menu.
+ * The editor-tab board (`tasks-editor-page`): every view as a tab with no "More" menu, and card press and drag.
  */
 import { test, expect } from '@playwright/test';
 import {
   installVsCodeMock,
   postMessageToWebview,
   getLastPostedMessage,
+  getPostedMessages,
+  clearPostedMessages,
 } from './fixtures/vscode-mock';
+import type { Task } from '../src/webview/lib/types';
 
 const ALL_TABS = ['kanban', 'list', 'dashboard', 'drafts', 'archived', 'docs', 'decisions'];
 
@@ -55,5 +58,60 @@ test.describe('Editor-tab board tab bar', () => {
     expect(scrollWidth).toBeGreaterThan(clientWidth);
     await page.locator('[data-testid="action-refresh"]').scrollIntoViewIfNeeded();
     await expect(page.locator('[data-testid="action-refresh"]')).toBeInViewport();
+  });
+});
+
+function localTask(id: string): Task {
+  return {
+    id,
+    title: id,
+    status: 'To Do',
+    labels: [],
+    assignee: [],
+    dependencies: [],
+    acceptanceCriteria: [],
+    definitionOfDone: [],
+    filePath: `/test/tasks/${id.toLowerCase()}.md`,
+  };
+}
+
+test.describe('Editor-tab board card press and drag', () => {
+  test.beforeEach(async ({ page }) => {
+    await installVsCodeMock(page);
+    await page.goto('/tasks-editor.html');
+    await page.waitForTimeout(100);
+    await postMessageToWebview(page, { type: 'viewModeChanged', viewMode: 'kanban' });
+    await postMessageToWebview(page, { type: 'statusesUpdated', statuses: ['To Do', 'Done'] });
+    await postMessageToWebview(page, { type: 'milestonesUpdated', milestones: [] });
+    await postMessageToWebview(page, {
+      type: 'tasksUpdated',
+      tasks: [localTask('TASK-1'), localTask('TASK-2')],
+    });
+    await page.waitForTimeout(100);
+    await clearPostedMessages(page);
+  });
+
+  const selects = async (page: Parameters<typeof getPostedMessages>[0]) =>
+    (await getPostedMessages(page)).filter((m) => m.type === 'selectTask');
+
+  test('a press does not select the card; the click that ends it does', async ({ page }) => {
+    await page.locator('[data-testid="task-TASK-1"]').hover();
+    await page.mouse.down();
+    expect(await selects(page)).toEqual([]);
+    await page.mouse.up();
+    expect(await selects(page)).toEqual([
+      { type: 'selectTask', taskId: 'TASK-1', filePath: '/test/tasks/task-1.md' },
+    ]);
+  });
+
+  test('dragging a card to another column moves it without selecting it', async ({ page }) => {
+    await page
+      .locator('[data-testid="task-TASK-1"]')
+      .dragTo(page.locator('[data-testid="task-list-Done"]'));
+    const messages = await getPostedMessages(page);
+    expect(messages.filter((m) => m.type === 'selectTask')).toEqual([]);
+    expect(messages).toContainEqual(
+      expect.objectContaining({ type: 'updateTaskStatus', taskId: 'TASK-1', status: 'Done' })
+    );
   });
 });
