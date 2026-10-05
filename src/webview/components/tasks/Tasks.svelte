@@ -270,7 +270,6 @@
       switch (e.key) {
         case 'z': handleTabChange('kanban'); break;
         case 'x': handleTabChange('list'); break;
-        case 'c': handleTabChange('drafts'); break;
         case 'v': handleTabChange('archived'); break;
         case 'j': focusSibling('[data-task-id]', 1); break;
         case 'k': focusSibling('[data-task-id]', -1); break;

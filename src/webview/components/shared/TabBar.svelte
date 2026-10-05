@@ -13,10 +13,9 @@
     { mode: 'dashboard', label: 'Dashboard' },
   ];
 
+  // Drafts and Docs are not offered: this project does not use them.
   const overflowTabs: Tab[] = [
-    { mode: 'drafts', label: 'Drafts' },
     { mode: 'archived', label: 'Archived' },
-    { mode: 'docs', label: 'Docs' },
     { mode: 'decisions', label: 'Decisions' },
   ];
 
@@ -184,9 +183,6 @@
         </svg>
         <span class="tab-label">
           {overflowLabel}
-          {#if draftCount > 0 && !isOverflowTabActive}
-            <span class="overflow-draft-badge" data-testid="overflow-draft-badge">{draftCount}</span>
-          {/if}
         </span>
       </button>
 

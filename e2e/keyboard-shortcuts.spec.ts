@@ -125,13 +125,6 @@ test.describe('Keyboard Shortcuts', () => {
       const kanbanMsg = await getLastSetViewModeMessage(page);
       expect(kanbanMsg).toMatchObject({ type: 'setViewMode', mode: 'kanban' });
 
-      // Press c - switch to drafts view
-      await clearPostedMessages(page);
-      await page.keyboard.press('c');
-      await expect(page.locator('#list-view')).toBeVisible();
-      const draftsMsg = await getLastSetViewModeMessage(page);
-      expect(draftsMsg).toMatchObject({ type: 'setViewMode', mode: 'drafts' });
-
       // Press v - switch to archived view
       await clearPostedMessages(page);
       await page.keyboard.press('v');

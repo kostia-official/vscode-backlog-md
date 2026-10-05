@@ -11,7 +11,7 @@ import {
 } from './fixtures/vscode-mock';
 import type { Task } from '../src/webview/lib/types';
 
-const ALL_TABS = ['kanban', 'list', 'dashboard', 'drafts', 'archived', 'docs', 'decisions'];
+const ALL_TABS = ['kanban', 'list', 'dashboard', 'archived', 'decisions'];
 
 test.describe('Editor-tab board tab bar', () => {
   test.beforeEach(async ({ page }) => {
@@ -39,15 +39,16 @@ test.describe('Editor-tab board tab bar', () => {
     await expect(page.locator('[data-testid="tab-decisions"]')).toHaveClass(/active/);
   });
 
-  test('shows the draft count on the Drafts tab unless it is active', async ({ page }) => {
+  test('does not offer Drafts or Docs, nor a draft count', async ({ page }) => {
     await postMessageToWebview(page, { type: 'draftCountUpdated', count: 3 });
-    await expect(page.locator('[data-testid="tab-draft-badge"]')).toHaveText('3');
-    await page.locator('[data-testid="tab-drafts"]').click();
+    await expect(page.locator('.tab-bar > [data-testid="tab-archived"]')).toBeVisible();
+    await expect(page.locator('[data-testid="tab-drafts"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="tab-docs"]')).toHaveCount(0);
     await expect(page.locator('[data-testid="tab-draft-badge"]')).toHaveCount(0);
   });
 
-  test('scrolls the bar at 360px instead of cutting off tabs', async ({ page }) => {
-    await page.setViewportSize({ width: 360, height: 600 });
+  test('scrolls the bar at 240px instead of cutting off tabs', async ({ page }) => {
+    await page.setViewportSize({ width: 240, height: 600 });
     const bar = page.locator('.tab-bar');
     const { scrollWidth, clientWidth, overflowX } = await bar.evaluate((el) => ({
       scrollWidth: el.scrollWidth,

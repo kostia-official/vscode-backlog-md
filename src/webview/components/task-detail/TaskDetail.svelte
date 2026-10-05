@@ -297,6 +297,8 @@
     {isReadOnly}
   />
 
+  <!-- This project does not use these sections, so they are hidden; the parser and writer keep them. -->
+  {#if false}
   <Checklist
     title="Acceptance Criteria"
     items={task.acceptanceCriteria}
@@ -350,6 +352,7 @@
       onUpdate={handleUpdateFinalSummary}
       {isReadOnly}
     />
+  {/if}
   {/if}
 
   <ActionButtons

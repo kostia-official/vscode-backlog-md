@@ -1,7 +1,6 @@
 /**
- * Collapsible task detail sections: empty ones start collapsed, filled ones
- * open, Description never collapses, and a toggled choice outlives a reload
- * of the task data.
+ * Collapsible task detail sections: Description never collapses, Details
+ * collapses to one row, and a toggled choice outlives a reload of the task data.
  */
 import { test, expect } from '@playwright/test';
 import { installVsCodeMock, postMessageToWebview } from './fixtures/vscode-mock';
@@ -44,45 +43,11 @@ test.describe('Task detail collapsible sections', () => {
     await postMessageToWebview(page, { type: 'taskData', data: taskData });
   });
 
-  test('a filled section starts open, an empty one collapsed', async ({ page }) => {
-    await expect(page.locator('[data-testid="toggle-implementationPlan"]')).toHaveAttribute(
-      'aria-expanded',
-      'true'
-    );
-    await expect(page.locator('[data-testid="implementationPlan-view"]')).toContainText('Step one');
-    await expect(page.locator('[data-testid="toggle-acceptanceCriteria"]')).toHaveAttribute(
-      'aria-expanded',
-      'true'
-    );
-
-    await expect(page.locator('[data-testid="toggle-implementationNotes"]')).toHaveAttribute(
-      'aria-expanded',
-      'false'
-    );
-    await expect(page.locator('[data-testid="implementationNotes-view"]')).toHaveCount(0);
-    await expect(page.locator('[data-testid="toggle-definitionOfDone"]')).toHaveAttribute(
-      'aria-expanded',
-      'false'
-    );
-    await expect(page.locator('[data-testid="definitionOfDone-add"]')).toHaveCount(0);
-  });
-
   test('Description has no toggle and stays open', async ({ page }) => {
     await expect(page.locator('[data-testid="toggle-description"]')).toHaveCount(0);
     await expect(page.locator('[data-testid="description-view"]')).toContainText(
       'Some description.'
     );
-  });
-
-  test('Edit on a collapsed section opens it in edit mode', async ({ page }) => {
-    await page.locator('[data-testid="edit-implementationNotes-btn"]').click();
-    await expect(page.locator('[data-testid="toggle-implementationNotes"]')).toHaveAttribute(
-      'aria-expanded',
-      'true'
-    );
-    await expect(
-      page.locator('[data-testid="implementationNotes-section"] [data-testid="markdown-editor"]')
-    ).toBeVisible();
   });
 
   test('Details collapses to one header row and opens again', async ({ page }) => {
@@ -99,8 +64,7 @@ test.describe('Task detail collapsible sections', () => {
   });
 
   test('a toggled state survives a new taskData and is kept in webview state', async ({ page }) => {
-    await page.locator('[data-testid="toggle-implementationPlan"]').click();
-    await page.locator('[data-testid="toggle-implementationNotes"]').click();
+    await page.locator('[data-testid="toggle-details"]').click();
 
     await postMessageToWebview(page, {
       type: 'taskData',
@@ -108,23 +72,16 @@ test.describe('Task detail collapsible sections', () => {
     });
     await expect(page.locator('[data-testid="task-id"]')).toHaveText('TASK-2');
 
-    await expect(page.locator('[data-testid="toggle-implementationPlan"]')).toHaveAttribute(
+    await expect(page.locator('[data-testid="toggle-details"]')).toHaveAttribute(
       'aria-expanded',
       'false'
     );
-    await expect(page.locator('[data-testid="implementationNotes-view"]')).toContainText(
-      'No notes'
-    );
-
     const state = await page.evaluate(
       () =>
         (
           window as unknown as { __vscodeTestHelpers: { getState: () => unknown } }
         ).__vscodeTestHelpers.getState() as { sectionsOpen?: Record<string, boolean> }
     );
-    expect(state.sectionsOpen).toEqual({
-      'Implementation Plan': false,
-      'Implementation Notes': true,
-    });
+    expect(state.sectionsOpen).toEqual({ Details: false });
   });
 });

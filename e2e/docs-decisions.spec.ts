@@ -87,10 +87,9 @@ async function setupTasksView(page: ReturnType<typeof test.info>['page']) {
   await page.waitForTimeout(100);
 }
 
+// The Docs tab is not offered, so the host switches to the docs view.
 async function switchToDocsView(page: ReturnType<typeof test.info>['page']) {
-  await page.locator('[data-testid="overflow-menu-btn"]').click();
-  await page.waitForTimeout(50);
-  await page.locator('[data-testid="tab-docs"]').click();
+  await postMessageToWebview(page, { type: 'activeTabChanged', tab: 'docs' });
   await page.waitForTimeout(50);
 }
 
@@ -106,15 +105,10 @@ test.describe('Documents List View', () => {
     await setupTasksView(page);
   });
 
-  test('docs tab switches to docs view and shows empty state', async ({ page }) => {
-    await clearPostedMessages(page);
+  test('the docs view shows its empty state', async ({ page }) => {
     await switchToDocsView(page);
 
     await expect(page.locator('#docs-view')).toBeVisible();
-
-    const messages = await getPostedMessages(page);
-    const viewModeMsg = messages.find((m) => m.type === 'setViewMode');
-    expect(viewModeMsg).toMatchObject({ type: 'setViewMode', mode: 'docs' });
   });
 
   test('renders document list after data injection', async ({ page }) => {
@@ -395,30 +389,11 @@ test.describe('Tab Switching', () => {
     await expect(page.locator('#decisions-view')).not.toBeVisible();
   });
 
-  test('docs and decisions tabs are in the overflow menu', async ({ page }) => {
-    // Tabs should not be visible until overflow menu is opened
-    await expect(page.locator('[data-testid="tab-docs"]')).not.toBeVisible();
+  test('the decisions tab is in the overflow menu', async ({ page }) => {
     await expect(page.locator('[data-testid="tab-decisions"]')).not.toBeVisible();
-
-    // Open overflow menu
     await page.locator('[data-testid="overflow-menu-btn"]').click();
     await page.waitForTimeout(50);
-
-    // Now they should be visible
-    await expect(page.locator('[data-testid="tab-docs"]')).toBeVisible();
     await expect(page.locator('[data-testid="tab-decisions"]')).toBeVisible();
-  });
-
-  test('clicking docs tab in overflow menu switches to docs view', async ({ page }) => {
-    await clearPostedMessages(page);
-
-    // Open overflow menu first
-    await page.locator('[data-testid="overflow-menu-btn"]').click();
-    await page.waitForTimeout(50);
-    await page.locator('[data-testid="tab-docs"]').click();
-    await page.waitForTimeout(50);
-
-    await expect(page.locator('#docs-view')).toBeVisible();
   });
 
   test('clicking decisions tab in overflow menu switches to decisions view', async ({ page }) => {

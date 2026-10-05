@@ -51,10 +51,6 @@
               <span>List view</span>
             </div>
             <div class="shortcut-row">
-              <kbd>c</kbd>
-              <span>Drafts view</span>
-            </div>
-            <div class="shortcut-row">
               <kbd>v</kbd>
               <span>Archived view</span>
             </div>
