@@ -175,26 +175,34 @@ test.describe('Task Preview Panel', () => {
       await expect(page.locator('[data-testid="compact-final-summary"]')).toHaveCount(0);
     });
 
-    test('displays plan, notes, and summary sections when populated', async ({ page }) => {
+    test('hides AC, DoD, plan, notes and summary even when populated', async ({ page }) => {
       await postMessageToWebview(page, {
-        ...samplePreviewData,
-        task: {
-          ...sampleTask,
-          plan: '1. Step one',
-          implementationNotes: 'Used approach X.',
-          finalSummary: 'Completed.',
-        },
+        ...checklistPreviewData,
         planHtml: '<ol><li>Step one</li></ol>',
         notesHtml: '<p>Used approach X.</p>',
         finalSummaryHtml: '<p>Completed.</p>',
       });
-      await page.waitForTimeout(50);
-
-      await expect(page.locator('[data-testid="compact-plan"]')).toContainText('Step one');
-      await expect(page.locator('[data-testid="compact-notes"]')).toContainText('Used approach X.');
-      await expect(page.locator('[data-testid="compact-final-summary"]')).toContainText(
-        'Completed.'
+      await expect(page.locator('[data-testid="compact-details-title"]')).toHaveText(
+        checklistPreviewData.task.title
       );
+      for (const id of [
+        'acceptanceCriteria',
+        'definitionOfDone',
+        'plan',
+        'notes',
+        'final-summary',
+      ]) {
+        await expect(page.locator(`[data-testid="compact-${id}"]`)).toHaveCount(0);
+      }
+      for (const title of [
+        'Acceptance Criteria',
+        'Definition of Done',
+        'Implementation Plan',
+        'Implementation Notes',
+        'Final Summary',
+      ]) {
+        await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+      }
     });
 
     test('displays updated date chip', async ({ page }) => {
@@ -364,81 +372,6 @@ test.describe('Task Preview Panel', () => {
 
     test('priority select is disabled', async ({ page }) => {
       await expect(page.locator('[data-testid="compact-priority-select"]')).toBeDisabled();
-    });
-  });
-
-  test.describe('Acceptance Criteria / Definition of Done checklists', () => {
-    test.beforeEach(async ({ page }) => {
-      await installVsCodeMock(page);
-      await page.goto('/task-preview.html');
-      await page.waitForTimeout(100);
-      await postMessageToWebview(page, checklistPreviewData);
-      await page.waitForTimeout(50);
-    });
-
-    test('renders the Acceptance Criteria checklist with items and progress', async ({ page }) => {
-      const list = page.locator('[data-testid="compact-acceptanceCriteria"]');
-      await expect(list).toBeVisible();
-      await expect(list).toContainText('Scripts standardized');
-      await expect(list).toContainText('Campaign executed');
-      await expect(page.locator('[data-testid="compact-acceptanceCriteria-progress"]')).toHaveText(
-        '1 of 2 complete'
-      );
-    });
-
-    test('renders the Definition of Done checklist with items', async ({ page }) => {
-      const list = page.locator('[data-testid="compact-definitionOfDone"]');
-      await expect(list).toBeVisible();
-      await expect(list).toContainText('Tests pass');
-    });
-
-    test('hides AC and DoD sections when the task has no items', async ({ page }) => {
-      await postMessageToWebview(page, samplePreviewData);
-      await page.waitForTimeout(50);
-
-      await expect(page.locator('[data-testid="compact-acceptanceCriteria"]')).toHaveCount(0);
-      await expect(page.locator('[data-testid="compact-definitionOfDone"]')).toHaveCount(0);
-    });
-
-    test('clicking a checklist checkbox posts a toggleChecklistItem message', async ({ page }) => {
-      await clearPostedMessages(page);
-
-      await page.locator('[data-testid="compact-acceptanceCriteria-toggle-2"]').click();
-
-      const message = await getLastPostedMessage(page);
-      expect(message).toMatchObject({
-        type: 'toggleChecklistItem',
-        taskId: 'TASK-10.1',
-        listType: 'acceptanceCriteria',
-        itemId: 2,
-      });
-    });
-  });
-
-  test.describe('Read-only checklists', () => {
-    test.beforeEach(async ({ page }) => {
-      await installVsCodeMock(page);
-      await page.goto('/task-preview.html');
-      await page.waitForTimeout(100);
-      await postMessageToWebview(page, readOnlyPreviewData);
-      await page.waitForTimeout(50);
-    });
-
-    test('checklist checkbox is disabled for read-only tasks', async ({ page }) => {
-      await expect(
-        page.locator('[data-testid="compact-acceptanceCriteria-toggle-1"]')
-      ).toBeDisabled();
-    });
-
-    test('clicking a disabled checklist checkbox posts no message', async ({ page }) => {
-      await clearPostedMessages(page);
-
-      await page
-        .locator('[data-testid="compact-acceptanceCriteria-toggle-1"]')
-        .click({ force: true });
-
-      const messages = await getPostedMessages(page);
-      expect(messages.some((m) => m.type === 'toggleChecklistItem')).toBe(false);
     });
   });
 

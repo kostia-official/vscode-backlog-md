@@ -276,7 +276,7 @@
         {/each}
       </ul>
     {/snippet}
-
+    {#if false}<!-- Hidden: this project does not use these sections; the parser and writer keep them. -->
     {#if task.acceptanceCriteria?.length}
       {@render checklist('Acceptance Criteria', 'acceptanceCriteria', task.acceptanceCriteria)}
     {/if}
@@ -323,7 +323,7 @@
         {@html finalSummaryHtml}
       </div>
     {/if}
-
+    {/if}
     {#if subtaskSummaries.length > 0}
       <div class="compact-subtasks-heading">Subtasks ({subtaskSummaries.length})</div>
       <div class="compact-subtasks-list" data-testid="compact-subtasks-list">
