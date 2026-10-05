@@ -8,6 +8,7 @@
   } from '../../lib/types';
   import { statusToClass, customStatusStyle } from '../../lib/statusColors';
   import { formatTaskIdForDisplay } from '../../lib/taskIdDisplay';
+  import { selectOnFocus } from '../../lib/selectOnFocus';
   import { compareByOrdinal, calculateOrdinalsForDrop, type CardData } from '../../../core/ordinalUtils';
   import PriorityIcon from '../shared/PriorityIcon.svelte';
 
@@ -547,7 +548,7 @@
               class:ghost-parent-row={isGhostParent}
               onclick={isGhostParent ? undefined : () => handleRowClickGuarded(task)}
               ondblclick={isGhostParent ? undefined : () => handleRowDoubleClick(task)}
-              onfocus={isGhostParent ? undefined : () =>
+              use:selectOnFocus={isGhostParent ? undefined : () =>
                 onSelectTask(task.id, { filePath: task.filePath, source: task.source, branch: task.branch })}
               onkeydown={isGhostParent ? undefined : (e) => handleRowKeydown(e, task)}
               ondragstart={isGhostParent ? undefined : (e) => handleDragStart(e, task.id)}

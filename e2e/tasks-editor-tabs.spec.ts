@@ -1,7 +1,7 @@
 /**
  * The editor-tab board (`tasks-editor-page`): every view as a tab with no "More" menu, and card press and drag.
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   installVsCodeMock,
   postMessageToWebview,
@@ -91,26 +91,41 @@ test.describe('Editor-tab board card press and drag', () => {
     await clearPostedMessages(page);
   });
 
-  const selects = async (page: Parameters<typeof getPostedMessages>[0]) =>
+  const selects = async (page: Page) =>
     (await getPostedMessages(page)).filter((m) => m.type === 'selectTask');
+  const selectTask1 = { type: 'selectTask', taskId: 'TASK-1', filePath: '/test/tasks/task-1.md' };
 
   test('a press does not select the card; the click that ends it does', async ({ page }) => {
     await page.locator('[data-testid="task-TASK-1"]').hover();
     await page.mouse.down();
     expect(await selects(page)).toEqual([]);
     await page.mouse.up();
-    expect(await selects(page)).toEqual([
-      { type: 'selectTask', taskId: 'TASK-1', filePath: '/test/tasks/task-1.md' },
-    ]);
+    expect(await selects(page)).toEqual([selectTask1]);
+  });
+
+  test('a right-button press still selects the card on focus', async ({ page }) => {
+    await page.locator('[data-testid="task-TASK-1"]').hover();
+    await page.mouse.down({ button: 'right' });
+    expect(await selects(page)).toEqual([selectTask1]);
+    await page.mouse.up({ button: 'right' });
+  });
+
+  test('a press does not select a list row; the click that ends it does', async ({ page }) => {
+    await postMessageToWebview(page, { type: 'viewModeChanged', viewMode: 'list' });
+    await page.locator('[data-testid="task-row-TASK-1"]').hover();
+    await clearPostedMessages(page);
+    await page.mouse.down();
+    expect(await selects(page)).toEqual([]);
+    await page.mouse.up();
+    expect(await selects(page)).toEqual([selectTask1]);
   });
 
   test('dragging a card to another column moves it without selecting it', async ({ page }) => {
     await page
       .locator('[data-testid="task-TASK-1"]')
       .dragTo(page.locator('[data-testid="task-list-Done"]'));
-    const messages = await getPostedMessages(page);
-    expect(messages.filter((m) => m.type === 'selectTask')).toEqual([]);
-    expect(messages).toContainEqual(
+    expect(await selects(page)).toEqual([]);
+    expect(await getPostedMessages(page)).toContainEqual(
       expect.objectContaining({ type: 'updateTaskStatus', taskId: 'TASK-1', status: 'Done' })
     );
   });

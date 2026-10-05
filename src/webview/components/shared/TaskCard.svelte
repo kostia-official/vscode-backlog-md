@@ -6,6 +6,7 @@
     type TaskIdDisplayMode,
   } from '../../lib/types';
   import { formatTaskIdForDisplay } from '../../lib/taskIdDisplay';
+  import { selectOnFocus } from '../../lib/selectOnFocus';
   import PriorityIcon from './PriorityIcon.svelte';
 
   interface Props {
@@ -45,12 +46,7 @@
     onOpenTask(task.id, { filePath: task.filePath, source: task.source, branch: task.branch });
   }
 
-  // A press focuses the card before a drag can start, and selecting on that focus
-  // opens the detail tab over the editor-tab board. The click that ends a press selects.
-  let pressed = false;
-
   function handleFocus() {
-    if (pressed) return;
     onSelectTask(task.id, { filePath: task.filePath, source: task.source, branch: task.branch });
   }
 
@@ -110,10 +106,7 @@
   data-testid="task-{task.id}"
   onclick={handleClick}
   ondblclick={handleDoubleClick}
-  onfocus={handleFocus}
-  onpointerdown={() => (pressed = true)}
-  onpointercancel={() => (pressed = false)}
-  onblur={() => (pressed = false)}
+  use:selectOnFocus={handleFocus}
   onkeydown={handleKeydown}
   ondragstart={handleDragStart}
   ondragend={handleDragEnd}
