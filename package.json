@@ -202,7 +202,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "vscode:prepublish": "bun run build",
+    "vscode:prepublish": "rm -rf dist && bun run build",
     "package": "vsce package --no-dependencies",
     "licenses:generate": "bash scripts/generate-licenses.sh",
     "licenses:check": "bash scripts/check-licenses.sh",
