@@ -133,6 +133,9 @@ test.describe('Task Preview Panel', () => {
       await expect(
         page.locator('.compact-meta-lines [data-testid="label-chip-feature"]')
       ).toBeVisible();
+      const ui = (await page.locator('[data-testid="label-chip-ui"]').boundingBox())!;
+      const feature = (await page.locator('[data-testid="label-chip-feature"]').boundingBox())!;
+      expect(feature.x - (ui.x + ui.width)).toBeGreaterThanOrEqual(3);
     });
 
     test('a label chip posts filterByLabel and no selectTask', async ({ page }) => {

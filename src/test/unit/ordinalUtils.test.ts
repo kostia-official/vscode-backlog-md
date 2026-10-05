@@ -3,6 +3,7 @@ import {
   hasOrdinal,
   compareByOrdinal,
   calculateOrdinalsForDrop,
+  mapDropToFullColumn,
   sortCardsByOrdinal,
   CardData,
 } from '../../core/ordinalUtils';
@@ -177,6 +178,29 @@ describe('ordinalUtils', () => {
 
       expect(sorted[0].taskId).toBe('B'); // lower ordinal wins
       expect(sorted[1].taskId).toBe('A');
+    });
+  });
+
+  describe('mapDropToFullColumn', () => {
+    const full: CardData[] = [
+      { taskId: 'C', ordinal: 3000 },
+      { taskId: 'D', ordinal: 4000 },
+      { taskId: 'E', ordinal: 5000 },
+    ];
+    const visible = [full[0], full[2]];
+
+    it('drops before the visible card at the index, in the full column', () => {
+      expect(mapDropToFullColumn(visible, full, 1)).toBe(2);
+    });
+
+    it('drops right after the last visible card, before the hidden ones', () => {
+      expect(mapDropToFullColumn([full[0]], full, 1)).toBe(1);
+      const updates = calculateOrdinalsForDrop(full, { taskId: 'X', ordinal: undefined }, 1);
+      expect(updates).toEqual([{ taskId: 'X', ordinal: 3500 }]);
+    });
+
+    it('drops at the end of the full column when no card is visible', () => {
+      expect(mapDropToFullColumn([], full, 0)).toBe(3);
     });
   });
 

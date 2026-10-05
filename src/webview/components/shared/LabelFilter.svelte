@@ -1,15 +1,16 @@
 <script lang="ts">
   // Multi-select label filter: a task matches when it has ANY selected label (OR).
-  // "All Labels" clears the selection; renders nothing when there are no labels.
+  // "All Labels" clears the selection; shown while there are labels or a selection.
   let {
     labels,
     selected,
     onChange,
   }: { labels: string[]; selected: string[]; onChange: (next: string[]) => void } = $props();
 
-  let open = $state(false);
   let root: HTMLDetailsElement | undefined = $state();
 
+  // A selected label no task or config has any more stays listed, so it can be unchecked.
+  const options = $derived([...new Set([...labels, ...selected])]);
   const summaryText = $derived(selected.length ? selected.join(', ') : 'All Labels');
 
   function toggle(label: string, checked: boolean) {
@@ -21,8 +22,6 @@
     if (root) root.open = false;
   }
 
-  // The element's own `open` is read and written: the bound state follows only after
-  // the async `toggle` event, so a fast Escape would otherwise be missed.
   function handleWindowPointerDown(e: PointerEvent) {
     if (root?.open && !root.contains(e.target as Node)) root.open = false;
   }
@@ -34,8 +33,8 @@
 
 <svelte:window onpointerdown={handleWindowPointerDown} onkeydown={handleWindowKeydown} />
 
-{#if labels.length > 0}
-  <details class="label-filter-dropdown" data-testid="label-filter" bind:open bind:this={root}>
+{#if options.length > 0}
+  <details class="label-filter-dropdown" data-testid="label-filter" bind:this={root}>
     <summary class="label-filter" class:active={selected.length > 0} title={summaryText}>
       <span class="label-filter-text">{summaryText}</span>
     </summary>
@@ -43,7 +42,7 @@
       <button type="button" class="label-filter-clear" data-testid="label-filter-clear" onclick={clear}>
         All Labels
       </button>
-      {#each labels as label (label)}
+      {#each options as label (label)}
         <label class="label-filter-option">
           <input
             type="checkbox"

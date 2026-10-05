@@ -136,17 +136,26 @@ describe('TasksController', () => {
       expect(labelPosts()).toEqual([]);
     });
 
-    it('a filterByStatus message filters this same board and runs no command', async () => {
+    it('a pending label switches a board reloaded on the dashboard to list', async () => {
+      const controller = new TasksController(host, mockParser, mockContext);
+      controller.setViewMode('kanban');
+      controller.filterByLabel('bug');
+      await mockContext.globalState.update('backlog.viewMode', 'dashboard');
+      controller.loadPersistedState();
+      posted = [];
+      await controller.refresh();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(posted).toContainEqual({ type: 'activeTabChanged', tab: 'list' });
+      expect(labelPosts()).toEqual([{ type: 'setLabelFilter', label: 'bug' }]);
+    });
+
+    it('a filterByStatus message filters this same board', async () => {
       const controller = new TasksController(host, mockParser, mockContext);
       controller.setViewMode('dashboard');
       posted = [];
       await controller.handleMessage({ type: 'filterByStatus', status: 'To Do' });
       expect(posted).toContainEqual({ type: 'activeTabChanged', tab: 'list' });
       expect(posted).toContainEqual({ type: 'setFilter', filter: 'status:To Do' });
-      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
-        'backlog.filterByStatus',
-        expect.anything()
-      );
     });
 
     it('configUpdated carries the config labels', async () => {

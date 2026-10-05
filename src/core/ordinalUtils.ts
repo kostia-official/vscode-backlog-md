@@ -143,6 +143,21 @@ export function compareByOrdinal(a: CardData, b: CardData): number {
 }
 
 /**
+ * Index in the full column for a drop at `dropIndex` among its visible cards: before the
+ * visible card there, else right after the last visible card, else at the end.
+ * Hidden (filtered-out) cards keep their place and their ordinals stay unique.
+ */
+export function mapDropToFullColumn(
+  visible: CardData[],
+  full: CardData[],
+  dropIndex: number
+): number {
+  const indexOf = (card: CardData) => full.findIndex((c) => c.taskId === card.taskId);
+  if (dropIndex < visible.length) return indexOf(visible[dropIndex]);
+  return visible.length ? indexOf(visible[visible.length - 1]) + 1 : full.length;
+}
+
+/**
  * Sort cards by ordinal (matching upstream Backlog.md behavior):
  * - Cards WITH ordinal come first, sorted by ordinal ascending
  * - Cards WITHOUT ordinal come last, sorted by ID

@@ -172,7 +172,7 @@
         {#if task.labels.length > 0}
           <div class="compact-meta-line">
             <span class="compact-meta-key">Labels</span>
-            <span class="compact-meta-value">{#each task.labels as label (label)}<LabelChip {label} />{/each}</span>
+            <span class="compact-meta-value" style="display: inline-flex; flex-wrap: wrap; gap: 4px">{#each task.labels as label (label)}<LabelChip {label} />{/each}</span>
           </div>
         {/if}
         {#if task.assignee.length > 0}

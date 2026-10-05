@@ -10,8 +10,8 @@
 
   const addLabel = getAddLabel();
 
-  // The chip sits inside a card or row that selects, opens or arms its press guard
-  // on these events; stopping them keeps a chip click to the label alone.
+  // The chip sits inside a card or row that selects or opens on these events;
+  // stopping them keeps a chip click to the label alone.
   const stop = (e: Event) => e.stopPropagation();
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
@@ -28,7 +28,6 @@
     addLabel(label);
   }}
   ondblclick={stop}
-  onpointerdown={stop}
   onkeydown={handleKeydown}
 >{label}</button>
 

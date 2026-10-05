@@ -61,56 +61,6 @@ describe('TasksViewProvider', () => {
     );
   }
 
-  describe('setFilter', () => {
-    it('should post setFilter message with status:To Do filter', () => {
-      const provider = new TasksViewProvider(extensionUri, mockParser, mockContext);
-      resolveView(provider);
-
-      provider.setFilter('status:To Do');
-
-      expect(mockWebview.postMessage).toHaveBeenCalledWith({
-        type: 'setFilter',
-        filter: 'status:To Do',
-      });
-    });
-
-    it('should post setFilter message for not-done filter', () => {
-      const provider = new TasksViewProvider(extensionUri, mockParser, mockContext);
-      resolveView(provider);
-
-      provider.setFilter('not-done');
-
-      expect(mockWebview.postMessage).toHaveBeenCalledWith({
-        type: 'setFilter',
-        filter: 'not-done',
-      });
-    });
-
-    it('should post setFilter message for status:In Progress filter', () => {
-      const provider = new TasksViewProvider(extensionUri, mockParser, mockContext);
-      resolveView(provider);
-
-      provider.setFilter('status:In Progress');
-
-      expect(mockWebview.postMessage).toHaveBeenCalledWith({
-        type: 'setFilter',
-        filter: 'status:In Progress',
-      });
-    });
-
-    it('should post setFilter message for all filter', () => {
-      const provider = new TasksViewProvider(extensionUri, mockParser, mockContext);
-      resolveView(provider);
-
-      provider.setFilter('all');
-
-      expect(mockWebview.postMessage).toHaveBeenCalledWith({
-        type: 'setFilter',
-        filter: 'all',
-      });
-    });
-  });
-
   describe('tasks view settings', () => {
     it('should post settingsUpdated with default task id display mode', async () => {
       const getConfigValue = vi.fn().mockReturnValue('full');
@@ -1300,7 +1250,7 @@ describe('TasksViewProvider', () => {
   });
 
   describe('handleMessage filterByStatus', () => {
-    it('should filter this board by status without a command', async () => {
+    it('should filter this board by status', async () => {
       const provider = new TasksViewProvider(extensionUri, mockParser, mockContext);
       resolveView(provider);
 
@@ -1312,10 +1262,6 @@ describe('TasksViewProvider', () => {
         type: 'setFilter',
         filter: 'status:To Do',
       });
-      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
-        'backlog.filterByStatus',
-        'To Do'
-      );
     });
 
     it('should filter this board by In Progress status', async () => {
@@ -1330,10 +1276,6 @@ describe('TasksViewProvider', () => {
         type: 'setFilter',
         filter: 'status:In Progress',
       });
-      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
-        'backlog.filterByStatus',
-        'In Progress'
-      );
     });
   });
 

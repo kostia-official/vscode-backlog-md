@@ -182,6 +182,11 @@ export class TasksController {
       return;
     }
 
+    // A label from outside the board shows on kanban or list; the tab may have changed since.
+    if (this.pendingLabel && this.viewMode !== 'kanban' && this.viewMode !== 'list') {
+      return this.setViewMode('list');
+    }
+
     try {
       // Determine which tasks to load based on mode
       if (this.viewMode === 'dashboard') {

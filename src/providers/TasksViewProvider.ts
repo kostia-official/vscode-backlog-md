@@ -59,10 +59,6 @@ export class TasksViewProvider implements vscode.WebviewViewProvider {
     this.controller.setViewMode(mode);
   }
 
-  setFilter(filter: string): void {
-    this.controller.setFilter(filter);
-  }
-
   filterByLabel(label: string): void {
     this.controller.filterByLabel(label);
   }

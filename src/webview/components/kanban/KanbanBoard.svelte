@@ -2,7 +2,12 @@
   import type { Task, Milestone, TaskIdDisplayMode } from '../../lib/types';
   import KanbanColumn from './KanbanColumn.svelte';
   import MilestoneSection from './MilestoneSection.svelte';
-  import { calculateOrdinalsForDrop, type CardData } from '../../../core/ordinalUtils';
+  import {
+    calculateOrdinalsForDrop,
+    mapDropToFullColumn,
+    sortCardsByOrdinal,
+    type CardData,
+  } from '../../../core/ordinalUtils';
 
   type TaskWithBlocks = Task & { blocksTaskIds?: string[] };
 
@@ -69,12 +74,11 @@
     const uncategorized: TaskWithBlocks[] = [];
     const milestoneLabels = new Map(configMilestones.map((milestone) => [milestone.id, milestone.name]));
 
-    for (const task of shownTasks) {
-      if (task.milestone) {
-        (milestoneMap[task.milestone] ??= []).push(task);
-      } else {
-        uncategorized.push(task);
-      }
+    // Groups come from every task, so a label filter empties a group instead of removing it
+    const shown = new Set(shownTasks);
+    for (const task of topLevelTasks) {
+      const group = task.milestone ? (milestoneMap[task.milestone] ??= []) : uncategorized;
+      if (shown.has(task)) group.push(task);
     }
 
     // Include all configured milestones (even empty ones)
@@ -105,7 +109,7 @@
       tasks: milestoneMap[id],
     }));
 
-    if (uncategorized.length > 0) {
+    if (topLevelTasks.some((t) => !t.milestone)) {
       // Always place uncategorized group first (upstream behavior)
       groups.unshift({ id: null, label: 'Uncategorized', tasks: uncategorized });
     }
@@ -139,8 +143,19 @@
 
     const droppedCard: CardData = { taskId, ordinal: task.ordinal };
 
-    // Calculate ordinals
-    const ordinalUpdates = calculateOrdinalsForDrop(existingCards, droppedCard, dropIndex);
+    // Calculate ordinals; a filtered column places the drop among its hidden cards too
+    let ordinalUpdates;
+    if (selectedLabels.length) {
+      const fullColumn = sortCardsByOrdinal(
+        topLevelTasks
+          .filter((t) => t.id !== taskId && t.status.toLowerCase() === newStatus.toLowerCase())
+          .map((t) => ({ taskId: t.id, ordinal: t.ordinal, priority: t.priority }))
+      );
+      const fullIndex = mapDropToFullColumn(existingCards, fullColumn, dropIndex);
+      ordinalUpdates = calculateOrdinalsForDrop(fullColumn, droppedCard, fullIndex);
+    } else {
+      ordinalUpdates = calculateOrdinalsForDrop(existingCards, droppedCard, dropIndex);
+    }
 
     if (originalStatus === newStatus) {
       // Same column - reorder

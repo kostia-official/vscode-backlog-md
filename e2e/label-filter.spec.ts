@@ -103,6 +103,56 @@ test.describe('Kanban label filter', () => {
     await expect(filter).not.toHaveAttribute('open', '');
   });
 
+  test('stays visible while a label is selected, though no task or config has labels', async ({
+    page,
+  }) => {
+    await checkLabel(page, 'bug');
+    await postMessageToWebview(page, { type: 'configUpdated', config: { labels: [] } });
+    await postMessageToWebview(page, {
+      type: 'tasksUpdated',
+      tasks: [task('TASK-9', 'To Do', [])],
+    });
+    await expect(page.locator('[data-testid="label-filter-option-bug"]')).toBeChecked();
+    await page.locator('[data-testid="label-filter-clear"]').click();
+    await expect(page.locator('[data-testid="label-filter"]')).toHaveCount(0);
+  });
+
+  test('milestone grouping with no match keeps the groups, empty', async ({ page }) => {
+    await postMessageToWebview(page, { type: 'milestoneGroupingChanged', enabled: true });
+    await postMessageToWebview(page, {
+      type: 'tasksUpdated',
+      tasks: [
+        { ...task('TASK-1', 'To Do', ['bug']), milestone: 'm1' },
+        task('TASK-2', 'To Do', []),
+      ],
+    });
+    await checkLabel(page, 'docs');
+    await expect(page.locator('[data-testid="milestone-m1"]')).toBeVisible();
+    await expect(page.locator('[data-testid="milestone-__uncategorized__"]')).toBeVisible();
+    await expect(page.locator('.task-card')).toHaveCount(0);
+  });
+
+  test('a drop below the last shown card lands before the hidden cards', async ({ page }) => {
+    await postMessageToWebview(page, {
+      type: 'tasksUpdated',
+      tasks: [
+        { ...task('TASK-1', 'To Do', ['bug']), ordinal: 3000 },
+        { ...task('TASK-2', 'To Do', ['infra']), ordinal: 4000 },
+        task('TASK-3', 'In Progress', ['bug']),
+      ],
+    });
+    await checkLabel(page, 'bug');
+    await page.keyboard.press('Escape');
+    await clearPostedMessages(page);
+    const list = page.locator('[data-testid="task-list-To Do"]');
+    const box = (await list.boundingBox())!;
+    await card(page, 'TASK-3').dragTo(list, {
+      targetPosition: { x: box.width / 2, y: box.height - 4 },
+    });
+    const move = (await getPostedMessages(page)).find((m) => m.type === 'updateTaskStatus');
+    expect(move).toMatchObject({ taskId: 'TASK-3', status: 'To Do', ordinal: 3500 });
+  });
+
   test('switching to list keeps the selection and filters the rows', async ({ page }) => {
     await checkLabel(page, 'infra');
     await page.locator('[data-testid="tab-list"]').click();
@@ -141,6 +191,24 @@ test.describe('Label chips', () => {
     await page.keyboard.press('Space');
 
     expect(await selectsOrOpens(page)).toEqual([]);
+  });
+
+  test('a chip press does not stop the card selecting on its next keyboard focus', async ({
+    page,
+  }) => {
+    await card(page, 'TASK-1').locator('[data-testid="label-chip-bug"]').click();
+    await clearPostedMessages(page);
+    await page.keyboard.press('Shift+Tab');
+    await expect(card(page, 'TASK-1')).toBeFocused();
+    expect((await selectsOrOpens(page)).map((m) => m.taskId)).toEqual(['TASK-1']);
+  });
+
+  test('a chip click closes an open label dropdown', async ({ page }) => {
+    const filter = page.locator('[data-testid="label-filter"]');
+    await filter.locator('summary').click();
+    await expect(filter).toHaveAttribute('open', '');
+    await card(page, 'TASK-3').locator('[data-testid="label-chip-infra"]').click();
+    await expect(filter).not.toHaveAttribute('open', '');
   });
 
   test('a chip click posts no selectTask or openTask', async ({ page }) => {
