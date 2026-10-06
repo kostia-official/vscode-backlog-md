@@ -447,6 +447,22 @@ Old description
       expect(writtenContent).toContain('Task description');
     });
 
+    it('sets done_date to created_date when the task is created in the last status', async () => {
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      mockReaddirSync([]);
+      const frontmatterOf = () => {
+        const written = vi.mocked(fs.writeFileSync).mock.lastCall![1] as string;
+        return yaml.load(written.match(/^---\n([\s\S]*?)\n---/)![1]) as Record<string, unknown>;
+      };
+
+      await writer.createTask('/fake/backlog', { title: 'Born done', status: 'Done' });
+      const done = frontmatterOf();
+      expect(done.done_date).toBe(done.created_date);
+
+      await writer.createTask('/fake/backlog', { title: 'Born busy', status: 'In Progress' });
+      expect(frontmatterOf().done_date).toBeUndefined();
+    });
+
     it('should create tasks directory if it does not exist', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       mockReaddirSync([]);
@@ -1268,6 +1284,52 @@ Old scope.
         'SECTION:DESCRIPTION:END',
       ]);
       expect(written).toContain('New text.');
+    });
+
+    it('writes task frontmatter in the CLI serializeTask order', async () => {
+      const content = `---
+id: TASK-1
+title: Test
+status: Done
+assignee: []
+created_date: '2026-10-01 10:00'
+updated_date: '2026-10-02 10:00'
+done_date: '2026-10-02 10:00'
+due_date: '2026-11-01'
+labels: []
+milestone: m-1
+dependencies: []
+references:
+  - a.md
+documentation:
+  - b.md
+modified_files:
+  - c.ts
+parent_task_id: TASK-0
+subtasks:
+  - TASK-1.1
+priority: high
+type: Task
+project: core
+ordinal: 1000
+onStatusChange: ./hook.sh
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+Old
+<!-- SECTION:DESCRIPTION:END -->
+`;
+      vi.mocked(fs.readFileSync).mockReturnValue(content);
+      mockReaddirSync(['task-1.md']);
+
+      await writer.updateTask('TASK-1', { description: 'New' }, mockParser);
+
+      const written = vi.mocked(fs.writeFileSync).mock.calls[0][1] as string;
+      const keys = (text: string) =>
+        [...text.split('\n---')[0].matchAll(/^(\w+):/gm)].map((m) => m[1]);
+      expect(keys(written)).toEqual(keys(content));
     });
 
     it('takes only a whole END line as the end marker, not a quote in prose', async () => {

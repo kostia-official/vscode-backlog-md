@@ -731,18 +731,23 @@ export class BacklogWriter {
     const filePath = path.join(tasksDir, fileName);
 
     // Build frontmatter with config defaults
+    const status = options.status || config.default_status || 'To Do';
+    const createdDate = nowTimestamp();
+    const lastStatus = (config.statuses || ['To Do', 'In Progress', 'Done']).at(-1);
     const frontmatter: FrontmatterData = {
       id: taskId,
       title: options.title,
-      status: options.status || config.default_status || 'To Do',
+      status,
       priority: options.priority,
       labels: options.labels || [],
       milestone: options.milestone,
       assignee: options.assignee || (config.default_assignee ? [config.default_assignee] : []),
       reporter: config.default_reporter,
       dependencies: [],
-      created_date: nowTimestamp(),
-      updated_date: nowTimestamp(),
+      created_date: createdDate,
+      updated_date: createdDate,
+      // Created in the last configured status counts as entering it.
+      done_date: status === lastStatus ? createdDate : undefined,
     };
 
     // Remove undefined values
@@ -1363,11 +1368,31 @@ export class BacklogWriter {
     'tags',
   ];
 
-  // A task (it always has `dependencies`) keeps `type` after `priority`, where the CLI writes it.
-  private static readonly TASK_FIELD_ORDER: readonly string[] =
-    BacklogWriter.FRONTMATTER_FIELD_ORDER.filter((key) => key !== 'type').flatMap((key) =>
-      key === 'priority' ? [key, 'type'] : [key]
-    );
+  // A task (it always has `dependencies`) uses the CLI `serializeTask` order.
+  private static readonly TASK_FIELD_ORDER: readonly string[] = [
+    'id',
+    'title',
+    'status',
+    'assignee',
+    'reporter',
+    'created_date',
+    'updated_date',
+    'done_date',
+    'due_date',
+    'labels',
+    'milestone',
+    'dependencies',
+    'references',
+    'documentation',
+    'modified_files',
+    'parent_task_id',
+    'subtasks',
+    'priority',
+    'type',
+    'project',
+    'ordinal',
+    'onStatusChange',
+  ];
 
   /** Fields whose empty-array/empty-string value should be omitted entirely. */
   private static readonly FRONTMATTER_OMIT_IF_EMPTY: ReadonlySet<string> = new Set([
