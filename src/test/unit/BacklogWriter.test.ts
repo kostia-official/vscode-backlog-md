@@ -230,10 +230,10 @@ status: To Do
     const written = () => vi.mocked(fs.writeFileSync).mock.calls[0][1] as string;
     const fm = () =>
       yaml.load(written().match(/^---\n([\s\S]*?)\n---/)![1]) as Record<string, unknown>;
-    async function update(content: string, updates: Partial<Task>) {
+    async function update(content: string, updates: Partial<Task>, last = 'Done') {
       vi.mocked(fs.readFileSync).mockReturnValue(content);
       mockReaddirSync(['task-1.md']);
-      vi.spyOn(mockParser, 'getStatuses').mockResolvedValue(['To Do', 'In Progress', 'Done']);
+      vi.spyOn(mockParser, 'getStatuses').mockResolvedValue(['To Do', 'In Progress', last]);
       await writer.updateTask('TASK-1', updates, mockParser);
     }
 
@@ -255,6 +255,15 @@ status: To Do
       await update(
         `---\nid: TASK-1\ntitle: T\nstatus: Done\ndone_date: '2026-10-01 10:00'\n---\n`,
         { title: 'New', status: 'Done' }
+      );
+      expect(fm().done_date).toBe('2026-10-01 10:00');
+    });
+
+    it('compares the raw file status, not the parsed one', async () => {
+      await update(
+        `---\nid: TASK-1\ntitle: T\nstatus: Completed\ndone_date: '2026-10-01 10:00'\n---\n`,
+        { status: 'Completed' },
+        'Completed'
       );
       expect(fm().done_date).toBe('2026-10-01 10:00');
     });

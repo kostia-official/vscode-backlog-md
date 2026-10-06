@@ -64,6 +64,7 @@ export interface TasksHost {
  */
 export class TasksController {
   private viewMode: TasksViewMode = 'kanban';
+  private midnightTimer: ReturnType<typeof setTimeout> | undefined;
   private milestoneGrouping: boolean = false;
   private dataSourceMode: DataSourceMode = 'local-only';
   private dataSourceReason?: string;
@@ -964,10 +965,21 @@ export class TasksController {
         last7Days: lastSevenDays([...tasks, ...completedTasks], statuses.at(-1) ?? 'Done'),
       };
       this.host.postMessage({ type: 'statsUpdated', stats });
+      this.scheduleMidnightRefresh();
     } catch (error) {
       console.error('[Backlog.md] Error refreshing dashboard stats:', error);
       this.host.postMessage({ type: 'error', message: 'Failed to load statistics' });
     }
+  }
+
+  /** Moves the last-7-days window at local midnight while the dashboard stays open. */
+  private scheduleMidnightRefresh(): void {
+    clearTimeout(this.midnightTimer);
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    this.midnightTimer = setTimeout(() => {
+      if (this.viewMode === 'dashboard') void this.refreshDashboard();
+    }, midnight.getTime() - now.getTime());
   }
 
   /**

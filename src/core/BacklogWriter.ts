@@ -591,13 +591,14 @@ export class BacklogWriter {
 
     const { frontmatter, body } = this.extractFrontmatter(content);
 
-    // Apply updates to frontmatter
+    // done_date is the last time the task entered the last configured status;
+    // leaving that status clears it. The raw file status is compared, since the
+    // parsed one is normalized and may be cached.
+    const previousStatus = frontmatter.status;
     if (updates.status !== undefined) {
       frontmatter.status = updates.status;
     }
-    // done_date is the last time the task entered the last configured status;
-    // leaving that status clears it.
-    if (updates.status !== undefined && updates.status !== task.status) {
+    if (updates.status !== undefined && updates.status !== previousStatus) {
       if (updates.status === (await parser.getStatuses()).at(-1)) {
         frontmatter.done_date = nowTimestamp();
       } else {

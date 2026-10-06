@@ -102,6 +102,23 @@ describe('TasksController', () => {
     expect(posted).toContainEqual({ type: 'setLabelFilter', label: 'bug' });
   });
 
+  it('re-sends the dashboard stats at local midnight', async () => {
+    vi.useFakeTimers({ now: new Date(2026, 9, 5, 23, 59) });
+    try {
+      const controller = new TasksController(host, mockParser, mockContext);
+      controller.setViewMode('dashboard');
+      await vi.advanceTimersByTimeAsync(0);
+      const stats = () => posted.filter((m) => m.type === 'statsUpdated');
+      expect(stats()).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(61_000);
+      expect(stats()).toHaveLength(2);
+      const last = stats()[1] as Extract<ExtensionMessage, { type: 'statsUpdated' }>;
+      expect(last.stats.last7Days.at(-1)?.date).toBe('2026-10-06');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   describe('label filter', () => {
     const labelPosts = () => posted.filter((m) => m.type === 'setLabelFilter');
 
