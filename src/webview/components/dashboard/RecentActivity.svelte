@@ -36,19 +36,20 @@
   .recent-totals {
     margin-bottom: 8px;
   }
+  /* One grid for all cells, filled column by column, so each row shares one line */
   .recent-grid {
     display: grid;
     grid-template-columns: auto repeat(7, minmax(0, 1fr));
-    gap: 4px;
-    font-size: 12px;
-  }
-  .recent-column {
-    display: grid;
     grid-template-rows: repeat(3, auto);
-    gap: 2px;
+    grid-auto-flow: column;
+    gap: 2px 4px;
+    font-size: 12px;
     text-align: center;
   }
-  .recent-row-labels {
+  .recent-column {
+    display: contents;
+  }
+  .recent-row-labels > span {
     text-align: left;
     padding-right: 8px;
     color: var(--vscode-descriptionForeground, #858585);

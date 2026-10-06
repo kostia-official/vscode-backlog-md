@@ -120,6 +120,16 @@ test.describe('Dashboard Tab', () => {
     await expect(oct1.locator('[data-testid="created"]')).toHaveText('3');
     await expect(oct1.locator('[data-testid="done"]')).toHaveText('1');
     await expect(oct1).toContainText('Thu 1');
+
+    // Each row label sits on the same line as its numbers
+    for (const row of ['created', 'done']) {
+      const label = section.locator('.recent-row-labels span', {
+        hasText: row === 'created' ? 'Created' : 'Done',
+      });
+      const labelTop = (await label.boundingBox())!.y;
+      const cellTop = (await oct1.locator(`[data-testid="${row}"]`).boundingBox())!.y;
+      expect(Math.abs(labelTop - cellTop)).toBeLessThan(1);
+    }
   });
 
   test('displays status breakdown bars', async ({ page }) => {
