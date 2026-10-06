@@ -9,6 +9,9 @@ describe('taskHome', () => {
     expect(taskHomeGlob('tasks-management/{ID}-{slug}/task.md')).toBe(
       'tasks-management/*-*/task.md'
     );
+    expect(taskHomeGlob('tasks-management/{ID}-{slug}/{slug}.description.md')).toBe(
+      'tasks-management/*-*/*.description.md'
+    );
   });
 
   it('reads task_home only when it is a non-empty string', () => {
