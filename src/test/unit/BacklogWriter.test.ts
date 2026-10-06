@@ -1239,6 +1239,37 @@ The tab shows the party's known places.
       expect(dropDate(written)).toBe(dropDate(expected));
     });
 
+    it('accepts marker lines with stray whitespace, as the parser does', async () => {
+      const content = `---
+id: TASK-1
+title: Test
+status: To Do
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN --> 
+Old intro.
+
+## Scope
+
+Old scope.
+  <!-- SECTION:DESCRIPTION:END -->
+`;
+      vi.mocked(fs.readFileSync).mockReturnValue(content);
+      mockReaddirSync(['task-1.md']);
+
+      await writer.updateTask('TASK-1', { description: 'New text.' }, mockParser);
+
+      const written = vi.mocked(fs.writeFileSync).mock.calls[0][1] as string;
+      expect(written).not.toContain('Old');
+      expect(written.match(/SECTION:DESCRIPTION:(BEGIN|END)/g)).toEqual([
+        'SECTION:DESCRIPTION:BEGIN',
+        'SECTION:DESCRIPTION:END',
+      ]);
+      expect(written).toContain('New text.');
+    });
+
     it('takes only a whole END line as the end marker, not a quote in prose', async () => {
       const content = `---
 id: TASK-1

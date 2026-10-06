@@ -290,6 +290,27 @@ Why.`;
         expect(task?.acceptanceCriteria).toHaveLength(1);
         expect(task?.acceptanceCriteria[0].text).toBe('Real criterion');
       });
+
+      it('falls back to the heading-based parse when BEGIN has no END line', () => {
+        const content = `---
+id: D-1
+title: T
+status: Backlog
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+First part.
+
+## Acceptance Criteria
+- [ ] #1 Real criterion
+`;
+        const parser = new BacklogParser('/fake/path');
+        const task = parser.parseTaskContent(content, '/fake/D-1/task.md');
+        expect(task?.description).toBe('First part.');
+        expect(task?.acceptanceCriteria).toHaveLength(1);
+      });
     });
   });
 

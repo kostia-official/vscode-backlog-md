@@ -1074,13 +1074,15 @@ export class BacklogWriter {
     const beginMarker = '<!-- SECTION:DESCRIPTION:BEGIN -->';
     const endMarker = '<!-- SECTION:DESCRIPTION:END -->';
 
-    const beginIndex = body.search(/^<!-- SECTION:DESCRIPTION:BEGIN -->$/m);
-    const afterBegin = beginIndex + beginMarker.length;
-    const endOffset =
-      beginIndex === -1 ? -1 : body.slice(afterBegin).search(/^<!-- SECTION:DESCRIPTION:END -->$/m);
+    // Marker lines match as the parser reads them: whole lines, surrounding spaces allowed.
+    const begin = /^[ \t]*<!-- SECTION:DESCRIPTION:BEGIN -->[ \t]*$/m.exec(body);
+    const afterBegin = begin ? begin.index + begin[0].length : -1;
+    const endOffset = begin
+      ? body.slice(afterBegin).search(/^[ \t]*<!-- SECTION:DESCRIPTION:END -->[ \t]*$/m)
+      : -1;
     const endIndex = endOffset === -1 ? -1 : afterBegin + endOffset;
 
-    if (beginIndex !== -1 && endIndex !== -1) {
+    if (endIndex !== -1) {
       // Replace content between markers
       const before = body.substring(0, afterBegin);
       const after = body.substring(endIndex);
@@ -1334,13 +1336,9 @@ export class BacklogWriter {
     }
   }
 
-  /**
-   * Canonical field order covering tasks, decisions, and documents.
-   * `date` sits before `status` so decisions (`id, title, date, status`) match
-   * upstream exactly. `type` precedes `created_date` so documents
-   * (`id, title, type, created_date, updated_date, tags`) also match.
-   * Tasks use `TASK_FIELD_ORDER` below.
-   */
+  // Field order for decisions (`id, title, date, status`) and documents
+  // (`id, title, type, created_date, updated_date, tags`), as upstream writes them.
+  // Tasks use `TASK_FIELD_ORDER` below.
   private static readonly FRONTMATTER_FIELD_ORDER: readonly string[] = [
     'id',
     'title',

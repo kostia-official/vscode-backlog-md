@@ -583,8 +583,11 @@ export class BacklogParser {
       }
 
       // Track description section markers
+      // A BEGIN with no END line after it is skipped, and the heading-based parse applies.
       if (trimmedLine === '<!-- SECTION:DESCRIPTION:BEGIN -->') {
-        inDescriptionBlock = true;
+        inDescriptionBlock = lines
+          .slice(i + 1)
+          .some((rest) => rest.trim() === '<!-- SECTION:DESCRIPTION:END -->');
         continue;
       }
 
