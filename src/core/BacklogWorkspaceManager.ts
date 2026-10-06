@@ -1,10 +1,17 @@
 import * as vscode from 'vscode';
-import { resolveBacklogDirectory } from './resolveBacklogDirectory';
+import { readdirSync } from 'fs';
+import { join } from 'path';
+import {
+  resolveBacklogDirectory,
+  type BacklogDirectoryResolution,
+} from './resolveBacklogDirectory';
 
 export interface BacklogRoot {
   backlogPath: string;
   backlogDir: string;
   configPath?: string;
+  /** Folder that holds the board: the workspace folder or one of its children. */
+  projectRoot: string;
   workspaceFolder: vscode.WorkspaceFolder;
   label: string;
 }
@@ -33,14 +40,15 @@ export class BacklogWorkspaceManager implements vscode.Disposable {
     if (!folders) return this.roots;
 
     for (const folder of folders) {
-      const resolution = resolveBacklogDirectory(folder.uri.fsPath);
-      if (resolution.backlogPath) {
+      for (const resolution of findBoards(folder.uri.fsPath)) {
+        const sub = resolution.projectRoot.slice(folder.uri.fsPath.length + 1);
         this.roots.push({
-          backlogPath: resolution.backlogPath,
+          backlogPath: resolution.backlogPath!,
           backlogDir: resolution.backlogDir!,
           configPath: resolution.configPath ?? undefined,
+          projectRoot: resolution.projectRoot,
           workspaceFolder: folder,
-          label: folder.name,
+          label: sub ? `${folder.name}/${sub}` : folder.name,
         });
       }
     }
@@ -137,4 +145,22 @@ export class BacklogWorkspaceManager implements vscode.Disposable {
     }
     this.disposables = [];
   }
+}
+
+/** The folder's own board, or else the boards of its direct child folders. */
+export function findBoards(folderPath: string): BacklogDirectoryResolution[] {
+  const own = resolveBacklogDirectory(folderPath);
+  if (own.backlogPath) return [own];
+  let children: string[];
+  try {
+    children = readdirSync(folderPath, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules')
+      .map((d) => d.name)
+      .sort();
+  } catch {
+    return [];
+  }
+  return children
+    .map((name) => resolveBacklogDirectory(join(folderPath, name)))
+    .filter((r) => r.backlogPath);
 }

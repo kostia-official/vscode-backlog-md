@@ -62,11 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Initialize parser (may be undefined if no backlog folder)
   let parser = activeRoot
-    ? new BacklogParser(
-        activeRoot.backlogPath,
-        activeRoot.configPath,
-        activeRoot.workspaceFolder.uri.fsPath
-      )
+    ? new BacklogParser(activeRoot.backlogPath, activeRoot.configPath, activeRoot.projectRoot)
     : undefined;
 
   // Language providers: re-registered on backlog switch (selector varies per backlog dir)
@@ -131,7 +127,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Both Tasks board surfaces (sidebar + editor tab) are driven together — fan
   // every cross-cutting update out to all of them so they stay in sync.
   const tasksHosts: TasksBoardSurface[] = [tasksProvider, tasksPanelProvider];
-  const workspaceRootPath = activeRoot?.workspaceFolder?.uri.fsPath;
+  const workspaceRootPath = activeRoot?.projectRoot;
   if (workspaceRootPath) {
     tasksHosts.forEach((host) => host.setWorkspaceRoot(workspaceRootPath));
   }
@@ -178,7 +174,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     // Create new parser and file watcher
-    parser = new BacklogParser(root.backlogPath, root.configPath, root.workspaceFolder.uri.fsPath);
+    parser = new BacklogParser(root.backlogPath, root.configPath, root.projectRoot);
     fileWatcher = new FileWatcher(root.backlogPath);
     watchTaskHome(fileWatcher, parser);
     context.subscriptions.push(fileWatcher);
@@ -195,10 +191,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Update all view providers
-    if (root.workspaceFolder) {
-      const fsPath = root.workspaceFolder.uri.fsPath;
-      tasksHosts.forEach((host) => host.setWorkspaceRoot(fsPath));
-    }
+    tasksHosts.forEach((host) => host.setWorkspaceRoot(root.projectRoot));
     tasksHosts.forEach((host) => host.setParser(parser!));
     taskPreviewProvider.setParser(parser);
     taskDetailProvider.setParser(parser);
@@ -602,6 +595,7 @@ export function activate(context: vscode.ExtensionContext) {
         manager.addRoot({
           backlogPath: newBacklogPath,
           backlogDir: 'backlog', // init always creates backlog/
+          projectRoot: workspaceRoot,
           workspaceFolder: selectedFolder,
           label: selectedFolder.name,
         });
