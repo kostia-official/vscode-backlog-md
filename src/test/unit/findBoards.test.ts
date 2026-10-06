@@ -20,6 +20,7 @@ describe('findBoards', () => {
     board(join(root, 'core'));
     board(join(root, 'a/b'));
     mkdirSync(join(root, 'empty'));
+    mkdirSync(join(root, 'aaa-plain/backlog/tasks'), { recursive: true });
     const found = findBoards(root);
     expect(found.map((r) => r.projectRoot)).toEqual([join(root, 'core')]);
     expect(found[0].backlogPath).toBe(join(root, 'core/tasks-management/board'));

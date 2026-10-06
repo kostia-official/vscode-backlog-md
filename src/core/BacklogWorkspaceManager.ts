@@ -147,7 +147,11 @@ export class BacklogWorkspaceManager implements vscode.Disposable {
   }
 }
 
-/** The folder's own board, or else the boards of its direct child folders. */
+/**
+ * The folder's own board, or else the boards of its direct child folders.
+ * A child counts only with a backlog.config.yml, so repos that merely carry
+ * a backlog/ dir of their own are not picked up.
+ */
 export function findBoards(folderPath: string): BacklogDirectoryResolution[] {
   const own = resolveBacklogDirectory(folderPath);
   if (own.backlogPath) return [own];
@@ -162,5 +166,5 @@ export function findBoards(folderPath: string): BacklogDirectoryResolution[] {
   }
   return children
     .map((name) => resolveBacklogDirectory(join(folderPath, name)))
-    .filter((r) => r.backlogPath);
+    .filter((r) => r.backlogPath && r.rootConfigExists);
 }
