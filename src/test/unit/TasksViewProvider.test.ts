@@ -732,6 +732,36 @@ describe('TasksViewProvider', () => {
   });
 
   describe('computeStatistics (via refreshDashboard)', () => {
+    it('counts a completed task done today in the last 7 days', async () => {
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const doneTask: Task = {
+        id: 'T-9',
+        title: 'Done',
+        status: 'Done',
+        labels: [],
+        assignee: [],
+        dependencies: [],
+        acceptanceCriteria: [],
+        definitionOfDone: [],
+        filePath: '/t9.md',
+        doneAt: now.toISOString().slice(0, 16).replace('T', ' '),
+      };
+      (mockParser.getCompletedTasks as Mock).mockResolvedValue([doneTask]);
+
+      const provider = new TasksViewProvider(extensionUri, mockParser, mockContext);
+      resolveView(provider);
+      provider.setViewMode('dashboard');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const stats = (mockWebview.postMessage as Mock).mock.calls
+        .map((c) => c[0])
+        .find((m) => m.type === 'statsUpdated').stats;
+      expect(stats.last7Days).toHaveLength(7);
+      expect(stats.last7Days[6]).toEqual({ date: today, created: 0, done: 1 });
+    });
+
     it('should compute correct counts by status', async () => {
       const tasks: Task[] = [
         {

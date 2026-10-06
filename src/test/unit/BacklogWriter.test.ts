@@ -8,6 +8,7 @@ import {
   restoreLineEndings,
 } from '../../core/BacklogWriter';
 import { BacklogParser } from '../../core/BacklogParser';
+import type { Task } from '../../core/types';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 
@@ -222,6 +223,40 @@ status: To Do
       const writtenContent = vi.mocked(fs.writeFileSync).mock.calls[0][1] as string;
       expect(writtenContent).toContain('- [x] #1 AC first');
       expect(writtenContent).toContain('- [ ] #1 DoD first');
+    });
+  });
+
+  describe('updateTask: done_date', () => {
+    const written = () => vi.mocked(fs.writeFileSync).mock.calls[0][1] as string;
+    const fm = () =>
+      yaml.load(written().match(/^---\n([\s\S]*?)\n---/)![1]) as Record<string, unknown>;
+    async function update(content: string, updates: Partial<Task>) {
+      vi.mocked(fs.readFileSync).mockReturnValue(content);
+      mockReaddirSync(['task-1.md']);
+      vi.spyOn(mockParser, 'getStatuses').mockResolvedValue(['To Do', 'In Progress', 'Done']);
+      await writer.updateTask('TASK-1', updates, mockParser);
+    }
+
+    it('writes done_date, right after updated_date, when the status becomes the last status', async () => {
+      await update(`---\nid: TASK-1\ntitle: T\nstatus: In Progress\n---\n`, { status: 'Done' });
+      expect(fm().done_date).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+      expect(written()).toMatch(/\nupdated_date: [^\n]+\ndone_date: /);
+    });
+
+    it('deletes done_date when the status leaves the last status', async () => {
+      await update(
+        `---\nid: TASK-1\ntitle: T\nstatus: Done\ndone_date: '2026-10-01 10:00'\n---\n`,
+        { status: 'In Progress' }
+      );
+      expect(fm()).not.toHaveProperty('done_date');
+    });
+
+    it('keeps done_date on an update without a status change', async () => {
+      await update(
+        `---\nid: TASK-1\ntitle: T\nstatus: Done\ndone_date: '2026-10-01 10:00'\n---\n`,
+        { title: 'New', status: 'Done' }
+      );
+      expect(fm().done_date).toBe('2026-10-01 10:00');
     });
   });
 

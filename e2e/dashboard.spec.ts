@@ -32,6 +32,15 @@ const sampleStats: DashboardStats = {
     { name: 'v1.0', total: 5, done: 2 },
     { name: 'v2.0', total: 3, done: 0 },
   ],
+  last7Days: [
+    { date: '2026-09-29', created: 1, done: 0 },
+    { date: '2026-09-30', created: 0, done: 2 },
+    { date: '2026-10-01', created: 3, done: 1 },
+    { date: '2026-10-02', created: 0, done: 0 },
+    { date: '2026-10-03', created: 2, done: 0 },
+    { date: '2026-10-04', created: 0, done: 4 },
+    { date: '2026-10-05', created: 6, done: 2 },
+  ],
 };
 
 const emptyStats: DashboardStats = {
@@ -49,6 +58,7 @@ const emptyStats: DashboardStats = {
     none: 0,
   },
   milestones: [],
+  last7Days: [],
 };
 
 async function switchToDashboard(page: ReturnType<typeof test.info>['page']) {
@@ -92,12 +102,32 @@ test.describe('Dashboard Tab', () => {
     await expect(page.locator('.stat-card:not(.clickable) .stat-sublabel')).toContainText('30%');
   });
 
+  test('shows the last 7 days after the stat cards', async ({ page }) => {
+    await switchToDashboard(page);
+    await postMessageToWebview(page, { type: 'statsUpdated', stats: sampleStats });
+
+    const section = page.locator('[data-testid="recent-activity"]');
+    expect(
+      await section.evaluate((el) => el.previousElementSibling?.classList.contains('stats-grid'))
+    ).toBe(true);
+    await expect(section.locator('.recent-totals')).toHaveText('12 created · 9 done');
+    const columns = section.locator('[data-testid^="day-"]');
+    await expect(columns).toHaveCount(7);
+    expect(
+      await columns.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')))
+    ).toEqual(sampleStats.last7Days.map((d) => `day-${d.date}`));
+    const oct1 = section.locator('[data-testid="day-2026-10-01"]');
+    await expect(oct1.locator('[data-testid="created"]')).toHaveText('3');
+    await expect(oct1.locator('[data-testid="done"]')).toHaveText('1');
+    await expect(oct1).toContainText('Thu 1');
+  });
+
   test('displays status breakdown bars', async ({ page }) => {
     await switchToDashboard(page);
     await postMessageToWebview(page, { type: 'statsUpdated', stats: sampleStats });
 
     // Verify status breakdown section exists
-    await expect(page.locator('.section-title').first()).toHaveText('Status Breakdown');
+    await expect(page.locator('.section-title').nth(1)).toHaveText('Status Breakdown');
 
     // Verify status rows are present
     await expect(page.locator('.status-row')).toHaveCount(3);

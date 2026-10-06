@@ -46,6 +46,14 @@ export interface DashboardStats {
   byStatus: Record<string, number>;
   byPriority: Record<string, number>;
   milestones: MilestoneStats[];
+  last7Days: DayActivity[];
+}
+
+/** Tasks created and done on one local day (`date` is `YYYY-MM-DD`). */
+export interface DayActivity {
+  date: string;
+  created: number;
+  done: number;
 }
 
 export interface MilestoneStats {

@@ -63,6 +63,7 @@ export interface Task {
   filePath: string;
   createdAt?: string;
   updatedAt?: string;
+  doneAt?: string; // done_date: when the task last entered the done (last) status
   ordinal?: number; // For custom ordering within status columns (fractional indexing)
 
   // Cross-branch fields (upstream compatibility)
@@ -300,6 +301,7 @@ export type ExtensionMessage =
         byStatus: Record<string, number>;
         byPriority: Record<string, number>;
         milestones: Array<{ name: string; total: number; done: number }>;
+        last7Days: DayActivity[];
       };
     }
   | { type: 'configUpdated'; config: { projectName?: string; labels?: string[] } }
@@ -329,3 +331,10 @@ export type ExtensionMessage =
   | { type: 'decisionData'; decision: BacklogDecision; sections: Record<string, string> }
   | { type: 'activeEditedTaskChanged'; taskId: string | null }
   | { type: 'integrationBannerState'; show: boolean; cliAvailable: boolean };
+
+/** Tasks created and done on one local day (`date` is `YYYY-MM-DD`). */
+export interface DayActivity {
+  date: string;
+  created: number;
+  done: number;
+}

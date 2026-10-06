@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DashboardStats } from '../../lib/types';
   import StatsGrid from './StatsGrid.svelte';
+  import RecentActivity from './RecentActivity.svelte';
   import StatusBreakdown from './StatusBreakdown.svelte';
   import PriorityBreakdown from './PriorityBreakdown.svelte';
   import MilestoneList from './MilestoneList.svelte';
@@ -39,6 +40,7 @@
     <EmptyState type="no-backlog" />
   {:else if viewState === 'stats' && stats}
     <StatsGrid {stats} />
+    <RecentActivity days={stats.last7Days} />
     <StatusBreakdown {stats} />
     <PriorityBreakdown {stats} />
     <MilestoneList milestones={stats.milestones} />

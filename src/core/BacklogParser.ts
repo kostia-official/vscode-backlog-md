@@ -39,6 +39,7 @@ interface RawFrontmatter {
   created_date?: string;
   created?: string;
   updated_date?: string;
+  done_date?: string;
   updated?: string;
   ordinal?: number;
   reporter?: string;
@@ -695,6 +696,7 @@ export class BacklogParser {
     if (fm.updated_date || fm.updated) {
       task.updatedAt = this.normalizeDateValue(fm.updated_date || fm.updated);
     }
+    if (fm.done_date) task.doneAt = this.normalizeDateValue(fm.done_date);
     if (fm.parent_task_id || fm.parent) {
       task.parentTaskId = String(fm.parent_task_id || fm.parent);
     }

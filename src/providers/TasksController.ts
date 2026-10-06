@@ -17,6 +17,7 @@ import { TaskDetailProvider } from './TaskDetailProvider';
 import { StatusCallbackRunner } from '../core/StatusCallbackRunner';
 import { detectIntegration } from '../core/AgentIntegrationDetector';
 import { BacklogCli } from '../core/BacklogCli';
+import { lastSevenDays } from '../core/recentActivity';
 
 export type TasksViewMode =
   | 'kanban'
@@ -958,7 +959,10 @@ export class TasksController {
         this.parser.getCompletedTasks(),
         this.parser.getStatuses(),
       ]);
-      const stats = this.computeStatistics(tasks, completedTasks.length, statuses);
+      const stats = {
+        ...this.computeStatistics(tasks, completedTasks.length, statuses),
+        last7Days: lastSevenDays([...tasks, ...completedTasks], statuses.at(-1) ?? 'Done'),
+      };
       this.host.postMessage({ type: 'statsUpdated', stats });
     } catch (error) {
       console.error('[Backlog.md] Error refreshing dashboard stats:', error);

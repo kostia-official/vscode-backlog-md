@@ -595,6 +595,15 @@ export class BacklogWriter {
     if (updates.status !== undefined) {
       frontmatter.status = updates.status;
     }
+    // done_date is the last time the task entered the last configured status;
+    // leaving that status clears it.
+    if (updates.status !== undefined && updates.status !== task.status) {
+      if (updates.status === (await parser.getStatuses()).at(-1)) {
+        frontmatter.done_date = nowTimestamp();
+      } else {
+        delete frontmatter.done_date;
+      }
+    }
     if (updates.priority !== undefined) {
       frontmatter.priority = updates.priority;
     }
@@ -1339,6 +1348,7 @@ export class BacklogWriter {
     'reporter',
     'created_date',
     'updated_date',
+    'done_date',
     'labels',
     'milestone',
     'dependencies',

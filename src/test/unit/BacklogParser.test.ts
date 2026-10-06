@@ -16,6 +16,12 @@ vi.mock('fs', async () => {
 
 describe('BacklogParser', () => {
   describe('parseTaskContent', () => {
+    it('reads done_date into doneAt', () => {
+      const parser = new BacklogParser('/fake/path');
+      const content = `---\nid: TASK-1\ntitle: T\nstatus: Done\ndone_date: '2026-10-05 08:30'\n---\n`;
+      expect(parser.parseTaskContent(content, '/fake/task-1.md')?.doneAt).toBe('2026-10-05 08:30');
+    });
+
     it('should parse a task with YAML frontmatter', () => {
       const parser = new BacklogParser('/fake/path');
       const content = `---
