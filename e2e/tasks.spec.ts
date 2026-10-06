@@ -650,6 +650,48 @@ test.describe('Tasks View', () => {
     });
   });
 
+  test.describe('Done column order', () => {
+    const doneTask = (id: string, dates: { doneAt?: string; updatedAt?: string }) => ({
+      id,
+      title: id,
+      status: 'Done',
+      labels: [],
+      assignee: [],
+      dependencies: [],
+      acceptanceCriteria: [],
+      definitionOfDone: [],
+      filePath: `/test/tasks/${id.toLowerCase()}.md`,
+      ...dates,
+    });
+    // D-1 was edited last but finished first, so it sorts below both others.
+    const tasks = [
+      doneTask('D-1', { doneAt: '2026-10-01 10:00', updatedAt: '2026-10-05 10:00' }),
+      doneTask('D-2', { doneAt: '2026-10-03 10:00', updatedAt: '2026-10-03 10:00' }),
+      doneTask('D-3', { updatedAt: '2026-10-02 10:00' }),
+    ];
+    const expected = ['D-2', 'D-3', 'D-1'];
+
+    test('the board shows the newest done task on top', async ({ page }) => {
+      await setupTasksView(page);
+      await postMessageToWebview(page, { type: 'tasksUpdated', tasks });
+      const cards = page.locator('[data-testid="column-Done"] .task-card');
+      await expect(cards).toHaveCount(3);
+      expect(
+        await cards.evaluateAll((els) => els.map((el) => el.getAttribute('data-task-id')))
+      ).toEqual(expected);
+    });
+
+    test('the list sorted by status orders the Done group the same way', async ({ page }) => {
+      await setupListViewWithTasks(page, tasks);
+      await page.locator('[data-testid="status-filter"]').selectOption('all');
+      const rows = page.locator('tbody tr');
+      await expect(rows).toHaveCount(3);
+      expect(
+        await rows.evaluateAll((els) => els.map((el) => el.getAttribute('data-task-id')))
+      ).toEqual(expected);
+    });
+  });
+
   test.describe('Kanban task id display', () => {
     test.beforeEach(async ({ page }) => {
       await setupTasksView(page);

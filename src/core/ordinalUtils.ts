@@ -166,6 +166,26 @@ export function sortCardsByOrdinal(cards: CardData[]): CardData[] {
   return [...cards].sort(compareByOrdinal);
 }
 
+/**
+ * Order for a done column: newest first by done date, else by updated date.
+ * Tasks with neither date go last, by ID.
+ */
+export function compareDoneNewestFirst(
+  a: { id: string; doneAt?: string; updatedAt?: string },
+  b: { id: string; doneAt?: string; updatedAt?: string }
+): number {
+  const time = (t: typeof a) => {
+    const date = t.doneAt ?? t.updatedAt;
+    return date ? new Date(date).getTime() : 0;
+  };
+  const aTime = time(a);
+  const bTime = time(b);
+  if (!aTime && !bTime) return a.id.localeCompare(b.id);
+  if (!aTime) return 1;
+  if (!bTime) return -1;
+  return bTime - aTime;
+}
+
 export interface ResolveOrdinalConflictsOptions {
   defaultStep?: number;
   startOrdinal?: number;

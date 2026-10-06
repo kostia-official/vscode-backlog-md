@@ -5,6 +5,7 @@ import {
   calculateOrdinalsForDrop,
   mapDropToFullColumn,
   sortCardsByOrdinal,
+  compareDoneNewestFirst,
   CardData,
 } from '../../core/ordinalUtils';
 
@@ -391,6 +392,25 @@ describe('ordinalUtils', () => {
         expect(updates[0].ordinal).toBeGreaterThan(1000);
         expect(updates[0].ordinal).toBeLessThan(1100);
       });
+    });
+  });
+
+  describe('compareDoneNewestFirst', () => {
+    it('orders by done date, else updated date, newest first, undated last by ID', () => {
+      const tasks = [
+        { id: 'D-1', doneAt: '2026-10-01 10:00', updatedAt: '2026-10-05 10:00' },
+        { id: 'D-2' },
+        { id: 'D-3', doneAt: '2026-10-03 10:00', updatedAt: '2026-10-03 10:00' },
+        { id: 'D-4', updatedAt: '2026-10-02 10:00' },
+        { id: 'D-0' },
+      ];
+      expect([...tasks].sort(compareDoneNewestFirst).map((t) => t.id)).toEqual([
+        'D-3',
+        'D-4',
+        'D-1',
+        'D-0',
+        'D-2',
+      ]);
     });
   });
 });

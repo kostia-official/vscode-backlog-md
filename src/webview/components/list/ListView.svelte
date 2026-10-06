@@ -9,7 +9,12 @@
   import { statusToClass, customStatusStyle } from '../../lib/statusColors';
   import { formatTaskIdForDisplay } from '../../lib/taskIdDisplay';
   import { selectOnFocus } from '../../lib/selectOnFocus';
-  import { compareByOrdinal, calculateOrdinalsForDrop, type CardData } from '../../../core/ordinalUtils';
+  import {
+    compareByOrdinal,
+    compareDoneNewestFirst,
+    calculateOrdinalsForDrop,
+    type CardData,
+  } from '../../../core/ordinalUtils';
   import PriorityIcon from '../shared/PriorityIcon.svelte';
   import LabelFilter from '../shared/LabelFilter.svelte';
   import LabelChip from '../shared/LabelChip.svelte';
@@ -166,8 +171,9 @@
       }
       if (cmp !== 0) return cmp * dir;
 
-      // Ordinal tiebreaker when sorting by status (matches kanban ordering)
+      // Within a status, the kanban column's order: newest done first in a done group, else ordinal
       if (currentSort.field === 'status') {
+        if (/done|complete/i.test(a.status)) return compareDoneNewestFirst(a, b);
         const cardA: CardData = { taskId: a.id, ordinal: a.ordinal, priority: a.priority };
         const cardB: CardData = { taskId: b.id, ordinal: b.ordinal, priority: b.priority };
         return compareByOrdinal(cardA, cardB);
