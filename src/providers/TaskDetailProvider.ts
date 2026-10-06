@@ -8,9 +8,7 @@ import { StatusCallbackRunner } from '../core/StatusCallbackRunner';
 import { openWorkspaceFile, isValidLinkString } from '../core/openWorkspaceFile';
 import { parseMarkdown } from '../core/parseMarkdown';
 import { readTaskHome, realpathOr } from '../core/taskHome';
-
-// Same fallback as the CLI's DEFAULT_TASK_TYPES when the config has no types.
-const CLI_DEFAULT_TASK_TYPES = ['bug', 'feature', 'enhancement', 'task', 'chore', 'docs', 'spike'];
+import { getTaskTypeValues } from '../core/taskTypes';
 
 /**
  * Task detail data structure sent to the webview
@@ -438,7 +436,7 @@ export class TaskDetailProvider {
         task: contextTask,
         statuses,
         priorities: ['high', 'medium', 'low'],
-        types: config.types?.length ? config.types : [...CLI_DEFAULT_TASK_TYPES],
+        types: getTaskTypeValues(config.types),
         uniqueLabels,
         uniqueAssignees,
         milestones: milestoneOptions,

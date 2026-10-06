@@ -2,6 +2,7 @@
   import type { TaskStatus, TaskPriority } from '../../lib/types';
   import { statusToClass, customStatusStyle } from '../../lib/statusColors';
   import PriorityIcon from '../shared/PriorityIcon.svelte';
+  import { isBugType as isBug } from '../../../core/taskTypes';
 
   interface Props {
     taskId: string;
@@ -62,7 +63,7 @@
   const selectedType = $derived(
     typeOptions.find((t) => t.toLowerCase() === type?.toLowerCase()) ?? ''
   );
-  const isBugType = $derived(selectedType.toLowerCase() === 'bug');
+  const isBugType = $derived(isBug(selectedType));
 
   function autoResize() {
     if (!titleEl) return;

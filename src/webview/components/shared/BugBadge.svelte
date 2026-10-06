@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { isBugType } from '../../../core/taskTypes';
+
   let { type }: { type: string | undefined } = $props();
 </script>
 
-{#if type?.toLowerCase() === 'bug'}
+{#if isBugType(type)}
   <span class="bug-badge" data-testid="bug-badge">Bug</span>
 {/if}
 

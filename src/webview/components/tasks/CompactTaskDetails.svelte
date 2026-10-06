@@ -9,6 +9,7 @@
   import { formatStoredUtcDateForDisplay } from '../../lib/date-display';
   import { renderMermaidAction } from '../../lib/mermaidAction';
   import LabelChip from '../shared/LabelChip.svelte';
+  import { isBugType } from '../../../core/taskTypes';
 
   type TaskWithBlocks = Task & { blocksTaskIds?: string[] };
   type SubtaskSummary = {
@@ -121,7 +122,7 @@
 
     <div class="compact-chip-row">
       <span class="compact-status-chip">{task.status}</span>
-      {#if task.type?.toLowerCase() === 'bug'}
+      {#if isBugType(task.type)}
         <span class="compact-type-chip type-bug" data-testid="compact-type-chip">Bug</span>
       {/if}
       {#if task.priority}
@@ -458,7 +459,7 @@
 
   .compact-type-chip.type-bug {
     background: #ea4a5a;
-    color: #111;
+    color: #fff;
   }
 
   .compact-priority-chip.priority-high {
