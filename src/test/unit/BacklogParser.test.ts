@@ -222,6 +222,75 @@ status: To Do
       const task = parser.parseTaskContent(content, '/fake/path/issue-3.2 - Subtask.md');
       expect(task?.id).toBe('ISSUE-3.2');
     });
+
+    describe('description block with headings inside', () => {
+      const body = `Tag: **[Locations]**. UI.
+
+## Scope
+
+- The Locations tab shows the tree.
+- The party's place is marked.
+
+## Done when
+
+The tab shows the party's known places.`;
+      const wrap = (inner: string, after = '') => `---
+id: D-432
+title: Locations tab
+status: Backlog
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+
+${inner}
+
+<!-- SECTION:DESCRIPTION:END -->
+${after}`;
+
+      it('keeps every heading and line between the markers', () => {
+        const parser = new BacklogParser('/fake/path');
+        const task = parser.parseTaskContent(wrap(body), '/fake/D-432/task.md');
+        expect(task?.description).toBe(body);
+      });
+
+      it('keeps upstream section headings inside the markers as description', () => {
+        const inner = `Intro.
+
+## Acceptance Criteria
+
+- [ ] #1 Not a criterion
+
+## Plan
+
+Step one.
+
+## Explanation
+
+Why.`;
+        const parser = new BacklogParser('/fake/path');
+        const task = parser.parseTaskContent(wrap(inner), '/fake/D-1/task.md');
+        expect(task?.description).toBe(inner);
+        expect(task?.acceptanceCriteria).toEqual([]);
+        expect(task?.implementationPlan).toBeFalsy();
+      });
+
+      it('ends the description at the END line', () => {
+        const after = `Stray line after END.
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 Real criterion
+<!-- AC:END -->
+`;
+        const parser = new BacklogParser('/fake/path');
+        const task = parser.parseTaskContent(wrap(body, after), '/fake/D-432/task.md');
+        expect(task?.description).toBe(body);
+        expect(task?.acceptanceCriteria).toHaveLength(1);
+        expect(task?.acceptanceCriteria[0].text).toBe('Real criterion');
+      });
+    });
   });
 
   describe('getConfig', () => {

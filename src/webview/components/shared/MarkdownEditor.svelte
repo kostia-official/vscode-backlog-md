@@ -31,12 +31,22 @@
   // The content when the user started editing — used for Escape revert.
   // Set once in onMount. NOT updated on echo-backs from the extension.
   let originalContent = '';
+  // Only a text that differs from the last one sent is posted,
+  // so leaving the editor unchanged writes nothing.
+  let lastSent = '';
+
+  function send(value: string) {
+    if (value === lastSent) return;
+    lastSent = value;
+    onUpdate(value);
+  }
 
   onMount(async () => {
     const TinyMDE = await import('tiny-markdown-editor');
     if (!editorEl) return;
 
     originalContent = content;
+    lastSent = content;
 
     editor = new TinyMDE.Editor({
       element: editorEl,
@@ -80,7 +90,7 @@
       hasPendingChanges = true;
       debounceTimeout = setTimeout(() => {
         hasPendingChanges = false;
-        onUpdate(e.content);
+        send(e.content);
       }, 1000);
     });
 
@@ -138,7 +148,7 @@
     }
     hasPendingChanges = false;
     if (editor) {
-      onUpdate(editor.getContent());
+      send(editor.getContent());
     }
     onExit();
   }
@@ -160,7 +170,7 @@
       if (editor) {
         editor.setContent(originalContent);
       }
-      onUpdate(originalContent);
+      send(originalContent);
       onExit();
     }
   }
@@ -170,7 +180,7 @@
       clearTimeout(debounceTimeout);
     }
     if (hasPendingChanges && editor) {
-      onUpdate(editor.getContent());
+      send(editor.getContent());
     }
   });
 </script>

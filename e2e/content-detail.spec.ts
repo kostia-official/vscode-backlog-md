@@ -47,6 +47,10 @@ test.describe('Document Detail', () => {
     await setupContentDetail(page);
   });
 
+  test('posts ready on load', async ({ page }) => {
+    expect(await getLastPostedMessage(page)).toEqual({ type: 'ready' });
+  });
+
   test('shows loading state initially', async ({ page }) => {
     await expect(page.locator('[data-testid="content-detail"]')).toBeVisible();
     await expect(page.locator('.loading-state')).toBeVisible();

@@ -560,6 +560,18 @@ export class BacklogParser {
       const line = lines[i];
       const trimmedLine = line.trim();
 
+      // Inside the description markers every line is description, as the CLI reads it;
+      // only the END line leaves the block.
+      if (inDescriptionBlock) {
+        if (trimmedLine === '<!-- SECTION:DESCRIPTION:END -->') {
+          inDescriptionBlock = false;
+          currentSection = '';
+        } else if (trimmedLine || descriptionLines.length > 0) {
+          descriptionLines.push(line);
+        }
+        continue;
+      }
+
       // Track structured section markers (PLAN, NOTES, FINAL_SUMMARY)
       if (/^<!-- SECTION:(?:PLAN|NOTES|FINAL_SUMMARY):BEGIN -->$/.test(trimmedLine)) {
         inStructuredBlock = true;
@@ -573,10 +585,6 @@ export class BacklogParser {
       // Track description section markers
       if (trimmedLine === '<!-- SECTION:DESCRIPTION:BEGIN -->') {
         inDescriptionBlock = true;
-        continue;
-      }
-      if (trimmedLine === '<!-- SECTION:DESCRIPTION:END -->') {
-        inDescriptionBlock = false;
         continue;
       }
 
@@ -614,13 +622,7 @@ export class BacklogParser {
 
       // Handle section content
       if (currentSection === 'description') {
-        if (inDescriptionBlock && (trimmedLine || descriptionLines.length > 0)) {
-          descriptionLines.push(line);
-        } else if (
-          !inDescriptionBlock &&
-          (trimmedLine || descriptionLines.length > 0) &&
-          !trimmedLine.startsWith('<!--')
-        ) {
+        if ((trimmedLine || descriptionLines.length > 0) && !trimmedLine.startsWith('<!--')) {
           descriptionLines.push(line);
         }
       } else if (currentSection === 'acceptance') {

@@ -3,7 +3,7 @@
  *
  * Tests the TaskDetail Svelte component in isolation using the VS Code mock.
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   installVsCodeMock,
   postMessageToWebview,
@@ -625,6 +625,71 @@ test.describe('Task Detail', () => {
       await page.keyboard.type('_AFTER');
       const content = await tinyMDE.textContent();
       expect(content).toContain('TYPED_AFTER');
+    });
+
+    test.describe('posts a description only when it changed', () => {
+      const descriptionUpdates = async (page: Page) =>
+        (await getPostedMessages(page)).filter(
+          (m) => m.type === 'updateField' && m.field === 'description'
+        );
+
+      const leaveBy: Record<string, (page: Page) => Promise<void>> = {
+        Done: (page) => page.locator('[data-testid="edit-description-btn"]').click(),
+        'a click outside': (page) => page.locator('[data-testid="task-id"]').click(),
+        Escape: (page) => page.keyboard.press('Escape'),
+      };
+      for (const [name, leave] of Object.entries(leaveBy)) {
+        test(`${name} with no typing posts no updateField`, async ({ page }) => {
+          await page.locator('[data-testid="edit-description-btn"]').click();
+          await expect(page.locator('.TinyMDE')).toBeVisible();
+          await clearPostedMessages(page);
+          await leave(page);
+          await expect(page.locator('[data-testid="description-view"]')).toBeVisible();
+          await page.waitForTimeout(1200);
+          expect(await descriptionUpdates(page)).toEqual([]);
+        });
+      }
+
+      test('Done after the debounced write and its echo posts nothing more', async ({ page }) => {
+        await page.locator('[data-testid="edit-description-btn"]').click();
+        const tinyMDE = page.locator('.TinyMDE');
+        await expect(tinyMDE).toBeVisible();
+        await tinyMDE.click();
+        await page.keyboard.press('End');
+        await page.keyboard.type(' TYPED');
+        await page.waitForTimeout(1200);
+        const [sent] = await descriptionUpdates(page);
+        expect(sent).toBeTruthy();
+
+        await postMessageToWebview(page, {
+          type: 'taskData',
+          data: {
+            ...sampleTaskData,
+            task: { ...sampleTask, description: sent.value as string },
+          },
+        });
+        await page.waitForTimeout(50);
+        await page.locator('[data-testid="edit-description-btn"]').click();
+        await page.waitForTimeout(50);
+        expect(await descriptionUpdates(page)).toHaveLength(1);
+      });
+
+      test('Escape after the debounced write posts the original once', async ({ page }) => {
+        await page.locator('[data-testid="edit-description-btn"]').click();
+        const tinyMDE = page.locator('.TinyMDE');
+        await expect(tinyMDE).toBeVisible();
+        await tinyMDE.click();
+        await page.keyboard.press('End');
+        await page.keyboard.type(' TYPED');
+        await page.waitForTimeout(1200);
+        await clearPostedMessages(page);
+
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(50);
+        const updates = await descriptionUpdates(page);
+        expect(updates).toHaveLength(1);
+        expect(updates[0].value).toBe(sampleTask.description);
+      });
     });
   });
 

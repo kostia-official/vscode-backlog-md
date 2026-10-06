@@ -18,6 +18,9 @@ export class ContentDetailProvider {
   private static currentPanel: vscode.WebviewPanel | undefined;
   private static currentEntityId: string | undefined;
   private static currentEntityFilePath: string | undefined;
+  // A new panel drops messages until its app mounts; the last payload waits for `ready`.
+  private static ready = false;
+  private static pending: object | undefined;
   private readonly writer = new BacklogWriter();
 
   constructor(
@@ -49,7 +52,7 @@ export class ContentDetailProvider {
     ContentDetailProvider.currentEntityFilePath = doc.filePath;
 
     const contentHtml = doc.content ? await parseMarkdown(doc.content, doc.filePath) : '';
-    panel.webview.postMessage({ type: 'documentData', document: doc, contentHtml });
+    this.send(panel, { type: 'documentData', document: doc, contentHtml });
   }
 
   /**
@@ -82,7 +85,12 @@ export class ContentDetailProvider {
     if (decision.alternatives)
       sections.alternatives = await parseMarkdown(decision.alternatives, decision.filePath);
 
-    panel.webview.postMessage({ type: 'decisionData', decision, sections });
+    this.send(panel, { type: 'decisionData', decision, sections });
+  }
+
+  private send(panel: vscode.WebviewPanel, message: object): void {
+    ContentDetailProvider.pending = message;
+    if (ContentDetailProvider.ready) panel.webview.postMessage(message);
   }
 
   private async updateDecisionStatus(decisionId: unknown, status: unknown): Promise<void> {
@@ -117,10 +125,15 @@ export class ContentDetailProvider {
     });
 
     ContentDetailProvider.currentPanel = panel;
+    ContentDetailProvider.ready = false;
     panel.webview.html = this.getHtmlContent(panel.webview);
 
     panel.webview.onDidReceiveMessage(async (message) => {
-      if (message.type === 'openFile' && message.filePath) {
+      if (message.type === 'ready') {
+        ContentDetailProvider.ready = true;
+        const pending = ContentDetailProvider.pending;
+        if (pending) panel.webview.postMessage(pending);
+      } else if (message.type === 'openFile' && message.filePath) {
         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.filePath));
       } else if (message.type === 'openWorkspaceFile') {
         if (!isValidLinkString(message.relativePath)) return;
@@ -140,6 +153,8 @@ export class ContentDetailProvider {
       ContentDetailProvider.currentPanel = undefined;
       ContentDetailProvider.currentEntityId = undefined;
       ContentDetailProvider.currentEntityFilePath = undefined;
+      ContentDetailProvider.ready = false;
+      ContentDetailProvider.pending = undefined;
     });
 
     return panel;

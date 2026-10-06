@@ -1074,12 +1074,15 @@ export class BacklogWriter {
     const beginMarker = '<!-- SECTION:DESCRIPTION:BEGIN -->';
     const endMarker = '<!-- SECTION:DESCRIPTION:END -->';
 
-    const beginIndex = body.indexOf(beginMarker);
-    const endIndex = body.indexOf(endMarker);
+    const beginIndex = body.search(/^<!-- SECTION:DESCRIPTION:BEGIN -->$/m);
+    const afterBegin = beginIndex + beginMarker.length;
+    const endOffset =
+      beginIndex === -1 ? -1 : body.slice(afterBegin).search(/^<!-- SECTION:DESCRIPTION:END -->$/m);
+    const endIndex = endOffset === -1 ? -1 : afterBegin + endOffset;
 
-    if (beginIndex !== -1 && endIndex !== -1 && endIndex > beginIndex) {
+    if (beginIndex !== -1 && endIndex !== -1) {
       // Replace content between markers
-      const before = body.substring(0, beginIndex + beginMarker.length);
+      const before = body.substring(0, afterBegin);
       const after = body.substring(endIndex);
       return `${before}\n${newDescription}\n${after}`;
     }
@@ -1336,8 +1339,7 @@ export class BacklogWriter {
    * `date` sits before `status` so decisions (`id, title, date, status`) match
    * upstream exactly. `type` precedes `created_date` so documents
    * (`id, title, type, created_date, updated_date, tags`) also match.
-   * Tasks have none of `type`/`date`/`tags`, so those slots are harmlessly
-   * skipped and task order stays upstream-identical.
+   * Tasks use `TASK_FIELD_ORDER` below.
    */
   private static readonly FRONTMATTER_FIELD_ORDER: readonly string[] = [
     'id',
@@ -1362,6 +1364,12 @@ export class BacklogWriter {
     'onStatusChange',
     'tags',
   ];
+
+  // A task (it always has `dependencies`) keeps `type` after `priority`, where the CLI writes it.
+  private static readonly TASK_FIELD_ORDER: readonly string[] =
+    BacklogWriter.FRONTMATTER_FIELD_ORDER.filter((key) => key !== 'type').flatMap((key) =>
+      key === 'priority' ? [key, 'type'] : [key]
+    );
 
   /** Fields whose empty-array/empty-string value should be omitted entirely. */
   private static readonly FRONTMATTER_OMIT_IF_EMPTY: ReadonlySet<string> = new Set([
@@ -1411,7 +1419,10 @@ export class BacklogWriter {
    */
   private orderFrontmatter(frontmatter: FrontmatterData): Record<string, unknown> {
     const result: Record<string, unknown> = {};
-    const order = BacklogWriter.FRONTMATTER_FIELD_ORDER;
+    const order =
+      'dependencies' in frontmatter
+        ? BacklogWriter.TASK_FIELD_ORDER
+        : BacklogWriter.FRONTMATTER_FIELD_ORDER;
     const omitIfEmpty = BacklogWriter.FRONTMATTER_OMIT_IF_EMPTY;
 
     const shouldSkip = (key: string, value: unknown): boolean => {

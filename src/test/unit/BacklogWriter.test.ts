@@ -1190,6 +1190,85 @@ With blank line above`;
       expect(writtenContent).toContain('Line 2');
       expect(writtenContent).toContain('With blank line above');
     });
+
+    const d432 = `---
+id: D-432
+title: Locations tab
+status: Backlog
+assignee: []
+created_date: '2026-10-04 18:24'
+updated_date: '2026-10-04 18:24'
+labels:
+  - locations
+dependencies: []
+type: Task
+ordinal: 3000
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+
+Tag: **[Locations]**. UI.
+
+## Scope
+
+- The Locations tab shows the tree.
+
+## Done when
+
+The tab shows the party's known places.
+
+<!-- SECTION:DESCRIPTION:END -->
+`;
+
+    it('changes only the edited word, the marker blank lines and updated_date', async () => {
+      vi.mocked(fs.readFileSync).mockReturnValue(d432);
+      mockReaddirSync(['task-1.md']);
+      const parsed = mockParser.parseTaskContent(d432, '/fake/backlog/tasks/task-1.md');
+      const edited = parsed!.description!.replace('tree', 'forest');
+
+      await writer.updateTask('D-432', { description: edited }, mockParser);
+
+      const written = vi.mocked(fs.writeFileSync).mock.calls[0][1] as string;
+      const expected = d432
+        .replace('tree', 'forest')
+        .replace('BEGIN -->\n\n', 'BEGIN -->\n')
+        .replace('\n\n<!-- SECTION:DESCRIPTION:END', '\n<!-- SECTION:DESCRIPTION:END');
+      const dropDate = (text: string) => text.replace(/^updated_date: .*$/m, 'updated_date: X');
+      expect(dropDate(written)).toBe(dropDate(expected));
+    });
+
+    it('takes only a whole END line as the end marker, not a quote in prose', async () => {
+      const content = `---
+id: TASK-1
+title: Test
+status: To Do
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+The block ends at \`<!-- SECTION:DESCRIPTION:END -->\` on its own line.
+
+## Scope
+
+Old scope.
+<!-- SECTION:DESCRIPTION:END -->
+`;
+      vi.mocked(fs.readFileSync).mockReturnValue(content);
+      mockReaddirSync(['task-1.md']);
+      const desc =
+        'The block ends at `<!-- SECTION:DESCRIPTION:END -->` on its own line.\n\n## Scope\n\nNew scope.';
+
+      await writer.updateTask('TASK-1', { description: desc }, mockParser);
+
+      const written = vi.mocked(fs.writeFileSync).mock.calls[0][1] as string;
+      expect(written).not.toContain('Old scope');
+      expect(written.split('<!-- SECTION:DESCRIPTION:BEGIN -->')[1]).toBe(
+        `\n${desc}\n<!-- SECTION:DESCRIPTION:END -->\n`
+      );
+    });
   });
 
   describe('New Fields: references, documentation, type', () => {

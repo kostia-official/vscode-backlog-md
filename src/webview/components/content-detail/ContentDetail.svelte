@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { BacklogDocument, BacklogDecision } from '../../lib/types';
   import { vscode, onMessage } from '../../stores/vscode.svelte';
   import { renderMermaidAction } from '../../lib/mermaidAction';
@@ -33,6 +34,8 @@
         break;
     }
   });
+
+  onMount(() => vscode.postMessage({ type: 'ready' }));
 
   function handleOpenFile() {
     const filePath = viewMode === 'document' ? document?.filePath : decision?.filePath;
