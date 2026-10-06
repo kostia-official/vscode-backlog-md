@@ -151,6 +151,26 @@ describe('BacklogWriter with task_home', () => {
     expect(run).not.toHaveBeenCalled();
   });
 
+  it('moves a linked task into a configured Draft column in place', async () => {
+    const configPath = path.join(root, 'backlog.config.yml');
+    fs.writeFileSync(
+      configPath,
+      CONFIG.replace(
+        '["Backlog", "In Progress", "Done"]',
+        '["Draft", "Backlog", "In Progress", "Done"]'
+      )
+    );
+    const link = path.join(board, 'tasks', 'd-1 - X.md');
+    const target = fs.realpathSync(link);
+
+    await writer.updateTask('D-1', { status: 'Draft' }, parser);
+
+    expect(fs.realpathSync(link)).toBe(target);
+    expect((await parser.getTask('D-1'))?.status).toBe('Draft');
+    expect(fs.readdirSync(path.join(board, 'drafts'))).toEqual(['draft-3 - Untitled.md']);
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it('refuses to delete a linked task or demote, but deletes a draft', async () => {
     await expect(writer.deleteTask('D-1', parser)).rejects.toThrow('Delete is disabled');
     await expect(writer.demoteTask('D-1', parser)).rejects.toThrow('Demote is disabled');
