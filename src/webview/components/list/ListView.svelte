@@ -18,6 +18,7 @@
   import PriorityIcon from '../shared/PriorityIcon.svelte';
   import LabelFilter from '../shared/LabelFilter.svelte';
   import LabelChip from '../shared/LabelChip.svelte';
+  import BugBadge from '../shared/BugBadge.svelte';
 
   type TaskWithBlocks = Task & { blocksTaskIds?: string[] };
 
@@ -578,6 +579,7 @@
                     {formatTaskIdForDisplay(task.id, taskIdDisplay)}
                   </span>
                 {/if}
+                <BugBadge type={task.type} />
                 {task.title}
                 {#if isReadOnly}
                   <span

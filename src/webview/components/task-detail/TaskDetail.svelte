@@ -18,6 +18,7 @@
   // Task data
   let task: Task | null = $state(null);
   let statuses: string[] = $state([]);
+  let types: string[] = $state([]);
   let uniqueLabels: string[] = $state([]);
   let uniqueAssignees: string[] = $state([]);
   let milestones: Array<{ id: string; label: string }> = $state([]);
@@ -45,6 +46,7 @@
           const data = message.data as TaskDetailData;
           task = data.task;
           statuses = data.statuses;
+          types = data.types ?? [];
           uniqueLabels = data.uniqueLabels;
           uniqueAssignees = data.uniqueAssignees;
           milestones = data.milestones;
@@ -90,6 +92,10 @@
 
   function handleUpdatePriority(priority: string | undefined) {
     vscode.postMessage({ type: 'updateField', field: 'priority', value: priority });
+  }
+
+  function handleUpdateType(type: string) {
+    vscode.postMessage({ type: 'updateField', field: 'type', value: type });
   }
 
   function handleUpdateLabels(labels: string[]) {
@@ -215,12 +221,15 @@
     title={task.title}
     status={task.status}
     priority={task.priority}
+    type={task.type}
+    {types}
     {statuses}
     {isBlocked}
     {isReadOnly}
     onUpdateTitle={handleUpdateTitle}
     onUpdateStatus={handleUpdateStatus}
     onUpdatePriority={handleUpdatePriority}
+    onUpdateType={handleUpdateType}
   />
 
   {#if isReadOnly}

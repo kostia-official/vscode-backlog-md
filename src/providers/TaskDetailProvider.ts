@@ -9,6 +9,9 @@ import { openWorkspaceFile, isValidLinkString } from '../core/openWorkspaceFile'
 import { parseMarkdown } from '../core/parseMarkdown';
 import { readTaskHome, realpathOr } from '../core/taskHome';
 
+// Same fallback as the CLI's DEFAULT_TASK_TYPES when the config has no types.
+const CLI_DEFAULT_TASK_TYPES = ['bug', 'feature', 'enhancement', 'task', 'chore', 'docs', 'spike'];
+
 /**
  * Task detail data structure sent to the webview
  */
@@ -16,6 +19,7 @@ interface TaskDetailData {
   task: Task;
   statuses: string[];
   priorities: string[];
+  types: string[];
   uniqueLabels: string[];
   uniqueAssignees: string[];
   milestones: Array<{ id: string; label: string }>;
@@ -429,10 +433,12 @@ export class TaskDetailProvider {
         }
       }
 
+      const config = await this.parser!.getConfig();
       const data: TaskDetailData = {
         task: contextTask,
         statuses,
         priorities: ['high', 'medium', 'low'],
+        types: config.types?.length ? config.types : [...CLI_DEFAULT_TASK_TYPES],
         uniqueLabels,
         uniqueAssignees,
         milestones: milestoneOptions,
@@ -450,7 +456,7 @@ export class TaskDetailProvider {
         readOnlyReason: isReadOnlyTask(task)
           ? `Task is from ${getReadOnlyTaskContext(task)} and is read-only.`
           : undefined,
-        taskHome: Boolean(readTaskHome(await this.parser!.getConfig())),
+        taskHome: Boolean(readTaskHome(config)),
         parentTask,
         subtaskSummaries,
       };

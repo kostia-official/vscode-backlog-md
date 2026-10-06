@@ -69,6 +69,7 @@ export interface TaskDetailData {
   task: import('../../core/types').Task;
   statuses: string[];
   priorities: string[];
+  types?: string[];
   uniqueLabels: string[];
   uniqueAssignees: string[];
   milestones: Array<{ id: string; label: string }>;

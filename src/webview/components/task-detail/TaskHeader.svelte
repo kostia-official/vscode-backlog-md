@@ -8,12 +8,15 @@
     title: string;
     status: TaskStatus;
     priority: TaskPriority | undefined;
+    type: string | undefined;
+    types: string[];
     statuses: string[];
     isBlocked: boolean;
     isReadOnly?: boolean;
     onUpdateTitle: (title: string) => void;
     onUpdateStatus: (status: string) => void;
     onUpdatePriority: (priority: string | undefined) => void;
+    onUpdateType: (type: string) => void;
   }
 
   let {
@@ -21,12 +24,15 @@
     title,
     status,
     priority,
+    type,
+    types,
     statuses,
     isBlocked,
     isReadOnly = false,
     onUpdateTitle,
     onUpdateStatus,
     onUpdatePriority,
+    onUpdateType,
   }: Props = $props();
 
   let titleValue = $state('');
@@ -50,6 +56,13 @@
   const statusInlineStyle = $derived(customStatusStyle(status));
   const priorityClass = $derived(priority ? `priority-${priority}` : '');
   const priorities = ['high', 'medium', 'low'];
+  const typeOptions = $derived(
+    type && !types.some((t) => t.toLowerCase() === type.toLowerCase()) ? [...types, type] : types
+  );
+  const selectedType = $derived(
+    typeOptions.find((t) => t.toLowerCase() === type?.toLowerCase()) ?? ''
+  );
+  const isBugType = $derived(selectedType.toLowerCase() === 'bug');
 
   function autoResize() {
     if (!titleEl) return;
@@ -78,6 +91,11 @@
   function handleStatusChange(e: Event) {
     const value = (e.target as HTMLSelectElement).value;
     onUpdateStatus(value);
+  }
+
+  function handleTypeChange(e: Event) {
+    const value = (e.target as HTMLSelectElement).value;
+    if (value) onUpdateType(value);
   }
 
   function handlePriorityChange(e: Event) {
@@ -112,6 +130,23 @@
         <option value={s}>{s}</option>
       {/each}
     </select>
+    {#if typeOptions.length > 0}
+      <select
+        class="dropdown-select type-select"
+        class:type-bug={isBugType}
+        data-testid="type-select"
+        value={selectedType}
+        disabled={isReadOnly}
+        onchange={handleTypeChange}
+      >
+        {#if !selectedType}
+          <option value="" disabled>Type</option>
+        {/if}
+        {#each typeOptions as t (t)}
+          <option value={t}>{t}</option>
+        {/each}
+      </select>
+    {/if}
     <span class="priority-select-wrapper">
       {#if priority}
         <PriorityIcon priority={priority} size={16} />

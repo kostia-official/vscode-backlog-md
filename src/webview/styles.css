@@ -166,6 +166,15 @@ body {
   text-transform: none;
 }
 
+.type-select {
+  background-color: var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.2));
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+}
+
+.type-select.type-bug {
+  color: var(--vscode-errorForeground, #dc2626);
+}
+
 .priority-select.priority-high {
   background-color: var(--vscode-inputValidation-errorBackground, rgba(220, 38, 38, 0.15));
   color: var(--vscode-errorForeground, #dc2626);
@@ -322,7 +331,7 @@ body {
 }
 
 .kanban-column.collapsed .column-header {
-  flex-direction: column;
+  flex-direction: row;
   writing-mode: vertical-rl;
   text-orientation: mixed;
   height: auto;
@@ -475,6 +484,13 @@ body {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
+}
+
+.task-card-id-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
 }
 
 .task-card-meta {
@@ -661,6 +677,10 @@ body {
   color: var(--vscode-descriptionForeground, #858585);
   margin-right: 6px;
   vertical-align: middle;
+}
+
+td .bug-badge {
+  margin-right: 6px;
 }
 
 .readonly-indicator {

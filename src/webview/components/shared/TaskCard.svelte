@@ -9,6 +9,7 @@
   import { selectOnFocus } from '../../lib/selectOnFocus';
   import PriorityIcon from './PriorityIcon.svelte';
   import LabelChip from './LabelChip.svelte';
+  import BugBadge from './BugBadge.svelte';
 
   interface Props {
     task: Task & { blocksTaskIds?: string[]; subtaskProgress?: { total: number; done: number } };
@@ -115,7 +116,11 @@
 >
   {#if showTaskId}
     <div class="task-card-id-row">
-      <div class="task-card-id" data-testid="task-id-{task.id}">{displayTaskId}</div>
+      <!-- the group keeps the priority icon at the right edge -->
+      <div class="task-card-id-group">
+        <div class="task-card-id" data-testid="task-id-{task.id}">{displayTaskId}</div>
+        <BugBadge type={task.type} />
+      </div>
       {#if task.priority}
         <PriorityIcon priority={task.priority} size={14} />
       {/if}
@@ -123,6 +128,9 @@
   {/if}
   <div class="task-card-title">{task.title}</div>
   <div class="task-card-meta">
+    {#if !showTaskId}
+      <BugBadge type={task.type} />
+    {/if}
     {#if task.priority && !showTaskId}
       <PriorityIcon priority={task.priority} size={14} />
     {/if}

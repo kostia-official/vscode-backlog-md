@@ -1427,6 +1427,46 @@ status: To Do
       expect(frontmatter.type).toBe('feature');
     });
 
+    it('adds type to an untyped task in the CLI field order', async () => {
+      const content = `---
+id: TASK-1
+title: Test
+status: To Do
+assignee: []
+created_date: '2026-01-01 10:00'
+updated_date: '2026-01-01 10:00'
+labels: []
+dependencies: []
+priority: high
+ordinal: 1000
+---
+
+Body.
+`;
+      vi.mocked(fs.readFileSync).mockReturnValue(content);
+      mockReaddirSync(['task-1.md']);
+
+      await writer.updateTask('TASK-1', { type: 'Bug' }, mockParser);
+
+      const writtenContent = vi.mocked(fs.writeFileSync).mock.calls[0][1] as string;
+      const match = writtenContent.match(/^---\n([\s\S]*?)\n---/);
+      const frontmatter = yaml.load(match![1]) as Record<string, unknown>;
+      expect(Object.keys(frontmatter)).toEqual([
+        'id',
+        'title',
+        'status',
+        'assignee',
+        'created_date',
+        'updated_date',
+        'labels',
+        'dependencies',
+        'priority',
+        'type',
+        'ordinal',
+      ]);
+      expect(frontmatter.type).toBe('Bug');
+    });
+
     it('should preserve existing references when updating other fields', async () => {
       const content = `---
 id: TASK-1

@@ -121,6 +121,9 @@
 
     <div class="compact-chip-row">
       <span class="compact-status-chip">{task.status}</span>
+      {#if task.type?.toLowerCase() === 'bug'}
+        <span class="compact-type-chip type-bug" data-testid="compact-type-chip">Bug</span>
+      {/if}
       {#if task.priority}
         <span class={`compact-priority-chip priority-${task.priority}`} title={priorityTitle[task.priority]}>
           {priorityLabel[task.priority]}
@@ -433,6 +436,7 @@
   }
 
   .compact-status-chip,
+  .compact-type-chip,
   .compact-priority-chip,
   .compact-updated-chip {
     border-radius: 999px;
@@ -450,6 +454,11 @@
   .compact-priority-chip {
     color: #111;
     background: var(--vscode-editorWarning-foreground, #cca700);
+  }
+
+  .compact-type-chip.type-bug {
+    background: #ea4a5a;
+    color: #111;
   }
 
   .compact-priority-chip.priority-high {

@@ -167,6 +167,7 @@ export interface BacklogConfig {
   statuses?: string[];
   priorities?: string[];
   labels?: string[];
+  types?: string[];
   milestones?: Milestone[];
   definition_of_done?: string[];
   date_format?: string;
