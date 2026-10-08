@@ -61,6 +61,8 @@ export class TaskDetailProvider {
   private static currentTaskRef: OpenTaskRequest | undefined;
   private static currentFileHash: string | undefined;
   private static currentFilePath: string | undefined;
+  // Bumped by every openTask; an older call's data is stale and is not posted.
+  private static openSeq = 0;
   private readonly writer = new BacklogWriter();
 
   /**
@@ -124,28 +126,42 @@ export class TaskDetailProvider {
         return;
       }
 
-      provider.openTask(this.currentTaskRef ?? this.currentTaskId, { preserveFocus: true });
+      provider.openTask(this.currentTaskRef ?? this.currentTaskId, { reveal: false });
     }
   }
 
   /**
-   * Open or update the task detail panel for a specific task
+   * Open or update the task detail panel for a specific task.
+   * `reveal: false` only refreshes the panel when it still shows this task:
+   * it never brings the tab to the front and never creates one.
    */
   async openTask(
     taskRef: string | OpenTaskRequest,
-    options?: { preserveFocus?: boolean; viewColumn?: vscode.ViewColumn }
+    options?: { preserveFocus?: boolean; viewColumn?: vscode.ViewColumn; reveal?: boolean }
   ): Promise<void> {
     if (!this.parser) {
       vscode.window.showErrorMessage('No backlog folder found');
       return;
     }
 
+    const reveal = options?.reveal !== false;
     const requestedTask = typeof taskRef === 'string' ? { taskId: taskRef } : taskRef;
     const task = await this.resolveTaskForOpen(requestedTask);
     if (!task) {
-      vscode.window.showErrorMessage(`Task ${requestedTask.taskId} not found`);
+      // A background refresh can hit a half-written file; the next watcher event retries.
+      if (reveal) vscode.window.showErrorMessage(`Task ${requestedTask.taskId} not found`);
       return;
     }
+
+    if (
+      !reveal &&
+      (!TaskDetailProvider.currentPanel ||
+        TaskDetailProvider.currentTaskId !== task.id ||
+        TaskDetailProvider.currentTaskRef?.filePath !== task.filePath)
+    ) {
+      return;
+    }
+    const seq = ++TaskDetailProvider.openSeq;
 
     // Capture file state for conflict detection and auto-refresh
     if (task.filePath && fs.existsSync(task.filePath)) {
@@ -167,7 +183,9 @@ export class TaskDetailProvider {
       // Keep an existing detail panel where the user has it (don't yank it to a
       // new column on every peek); only fall back to `column` if it has none.
       const revealColumn = TaskDetailProvider.currentPanel.viewColumn ?? column;
-      TaskDetailProvider.currentPanel.reveal(revealColumn, options?.preserveFocus);
+      if (reveal) {
+        TaskDetailProvider.currentPanel.reveal(revealColumn, options?.preserveFocus);
+      }
       TaskDetailProvider.currentPanel.title = `${task.id}: ${task.title}`;
       TaskDetailProvider.currentTaskId = task.id;
       TaskDetailProvider.currentTaskRef = {
@@ -176,8 +194,16 @@ export class TaskDetailProvider {
         source: task.source,
         branch: task.branch,
       };
-      await this.sendTaskData(TaskDetailProvider.currentPanel.webview, task);
-      TaskDetailProvider.notifyActiveTaskChanged(task.id);
+      await this.sendTaskData(
+        TaskDetailProvider.currentPanel.webview,
+        task,
+        () => seq !== TaskDetailProvider.openSeq
+      );
+      // The panel can close during the await above.
+      const panel = TaskDetailProvider.currentPanel as vscode.WebviewPanel | undefined;
+      if (panel && seq === TaskDetailProvider.openSeq && (reveal || panel.visible)) {
+        TaskDetailProvider.notifyActiveTaskChanged(task.id);
+      }
       return;
     }
 
@@ -310,7 +336,11 @@ export class TaskDetailProvider {
   /**
    * Send task data to the webview
    */
-  private async sendTaskData(webview: vscode.Webview, task: Task): Promise<void> {
+  private async sendTaskData(
+    webview: vscode.Webview,
+    task: Task,
+    isStale: () => boolean = () => false
+  ): Promise<void> {
     if (!this.parser) return;
 
     try {
@@ -459,7 +489,7 @@ export class TaskDetailProvider {
         subtaskSummaries,
       };
 
-      webview.postMessage({ type: 'taskData', data });
+      if (!isStale()) webview.postMessage({ type: 'taskData', data });
     } catch (error) {
       console.error('[Backlog.md] Error sending task data:', error);
       webview.postMessage({ type: 'error', message: 'Failed to load task data' });

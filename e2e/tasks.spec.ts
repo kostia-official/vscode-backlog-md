@@ -350,10 +350,15 @@ test.describe('Tasks View', () => {
       });
     });
 
-    test('focusing a card sends selectTask message for preview navigation', async ({ page }) => {
-      await clearPostedMessages(page);
+    test('keyboard focus on a card sends selectTask message for preview navigation', async ({
+      page,
+    }) => {
       const card = page.locator('[data-testid="task-TASK-1"]');
       await card.focus();
+      await page.keyboard.press('j');
+      await clearPostedMessages(page);
+      await page.keyboard.press('k');
+      await expect(card).toBeFocused();
 
       const message = await getLastPostedMessage(page);
       expect(message).toEqual({
@@ -541,10 +546,13 @@ test.describe('Tasks View', () => {
       });
     });
 
-    test('focusing a row sends selectTask message', async ({ page }) => {
-      await clearPostedMessages(page);
+    test('keyboard focus on a row sends selectTask message', async ({ page }) => {
       const row = page.locator('[data-testid="task-row-TASK-1"]');
       await row.focus();
+      await page.keyboard.press('j');
+      await clearPostedMessages(page);
+      await page.keyboard.press('k');
+      await expect(row).toBeFocused();
 
       const message = await getLastPostedMessage(page);
       expect(message).toEqual({
