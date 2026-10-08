@@ -124,16 +124,18 @@ export class TaskDetailProvider {
         return;
       }
 
-      provider.openTask(this.currentTaskRef ?? this.currentTaskId, { preserveFocus: true });
+      provider.openTask(this.currentTaskRef ?? this.currentTaskId, { reveal: false });
     }
   }
 
   /**
-   * Open or update the task detail panel for a specific task
+   * Open or update the task detail panel for a specific task.
+   * `reveal: false` only refreshes the panel when it still shows this task:
+   * it never brings the tab to the front and never creates one.
    */
   async openTask(
     taskRef: string | OpenTaskRequest,
-    options?: { preserveFocus?: boolean; viewColumn?: vscode.ViewColumn }
+    options?: { preserveFocus?: boolean; viewColumn?: vscode.ViewColumn; reveal?: boolean }
   ): Promise<void> {
     if (!this.parser) {
       vscode.window.showErrorMessage('No backlog folder found');
@@ -144,6 +146,14 @@ export class TaskDetailProvider {
     const task = await this.resolveTaskForOpen(requestedTask);
     if (!task) {
       vscode.window.showErrorMessage(`Task ${requestedTask.taskId} not found`);
+      return;
+    }
+
+    const reveal = options?.reveal !== false;
+    if (
+      !reveal &&
+      (!TaskDetailProvider.currentPanel || TaskDetailProvider.currentTaskId !== task.id)
+    ) {
       return;
     }
 
@@ -167,7 +177,9 @@ export class TaskDetailProvider {
       // Keep an existing detail panel where the user has it (don't yank it to a
       // new column on every peek); only fall back to `column` if it has none.
       const revealColumn = TaskDetailProvider.currentPanel.viewColumn ?? column;
-      TaskDetailProvider.currentPanel.reveal(revealColumn, options?.preserveFocus);
+      if (reveal) {
+        TaskDetailProvider.currentPanel.reveal(revealColumn, options?.preserveFocus);
+      }
       TaskDetailProvider.currentPanel.title = `${task.id}: ${task.title}`;
       TaskDetailProvider.currentTaskId = task.id;
       TaskDetailProvider.currentTaskRef = {
@@ -177,7 +189,9 @@ export class TaskDetailProvider {
         branch: task.branch,
       };
       await this.sendTaskData(TaskDetailProvider.currentPanel.webview, task);
-      TaskDetailProvider.notifyActiveTaskChanged(task.id);
+      if (reveal || TaskDetailProvider.currentPanel.visible) {
+        TaskDetailProvider.notifyActiveTaskChanged(task.id);
+      }
       return;
     }
 

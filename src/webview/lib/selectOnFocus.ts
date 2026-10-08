@@ -4,6 +4,17 @@
 // A press on a control inside (a label chip) focuses that control, so it arms nothing.
 import type { Action } from 'svelte/action';
 
+// Focus selects only inside the task of a key or pointer press in this document. A focus that
+// VS Code restores when the window or the webview gets focus back has no such input, and
+// selecting on it would open a detail tab the user did not ask for.
+let inputInProgress = false;
+const markInput = () => {
+  inputInProgress = true;
+  setTimeout(() => (inputInProgress = false));
+};
+document.addEventListener('keydown', markInput, true);
+document.addEventListener('pointerdown', markInput, true);
+
 export const selectOnFocus: Action<HTMLElement, (() => void) | undefined> = (node, select) => {
   let pressed = false;
   const onPointerDown = (e: PointerEvent) => {
@@ -12,7 +23,7 @@ export const selectOnFocus: Action<HTMLElement, (() => void) | undefined> = (nod
   };
   const clear = () => (pressed = false);
   const onFocus = () => {
-    if (!pressed) select?.();
+    if (!pressed && inputInProgress) select?.();
   };
   node.addEventListener('pointerdown', onPointerDown);
   node.addEventListener('pointercancel', clear);
