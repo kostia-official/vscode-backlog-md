@@ -61,6 +61,8 @@ export class TaskDetailProvider {
   private static currentTaskRef: OpenTaskRequest | undefined;
   private static currentFileHash: string | undefined;
   private static currentFilePath: string | undefined;
+  // Bumped by every openTask; an older call's data is stale and is not posted.
+  private static openSeq = 0;
   private readonly writer = new BacklogWriter();
 
   /**
@@ -142,20 +144,24 @@ export class TaskDetailProvider {
       return;
     }
 
+    const reveal = options?.reveal !== false;
     const requestedTask = typeof taskRef === 'string' ? { taskId: taskRef } : taskRef;
     const task = await this.resolveTaskForOpen(requestedTask);
     if (!task) {
-      vscode.window.showErrorMessage(`Task ${requestedTask.taskId} not found`);
+      // A background refresh can hit a half-written file; the next watcher event retries.
+      if (reveal) vscode.window.showErrorMessage(`Task ${requestedTask.taskId} not found`);
       return;
     }
 
-    const reveal = options?.reveal !== false;
     if (
       !reveal &&
-      (!TaskDetailProvider.currentPanel || TaskDetailProvider.currentTaskId !== task.id)
+      (!TaskDetailProvider.currentPanel ||
+        TaskDetailProvider.currentTaskId !== task.id ||
+        TaskDetailProvider.currentTaskRef?.filePath !== task.filePath)
     ) {
       return;
     }
+    const seq = ++TaskDetailProvider.openSeq;
 
     // Capture file state for conflict detection and auto-refresh
     if (task.filePath && fs.existsSync(task.filePath)) {
@@ -188,8 +194,14 @@ export class TaskDetailProvider {
         source: task.source,
         branch: task.branch,
       };
-      await this.sendTaskData(TaskDetailProvider.currentPanel.webview, task);
-      if (reveal || TaskDetailProvider.currentPanel.visible) {
+      await this.sendTaskData(
+        TaskDetailProvider.currentPanel.webview,
+        task,
+        () => seq !== TaskDetailProvider.openSeq
+      );
+      // The panel can close during the await above.
+      const panel = TaskDetailProvider.currentPanel as vscode.WebviewPanel | undefined;
+      if (panel && seq === TaskDetailProvider.openSeq && (reveal || panel.visible)) {
         TaskDetailProvider.notifyActiveTaskChanged(task.id);
       }
       return;
@@ -324,7 +336,11 @@ export class TaskDetailProvider {
   /**
    * Send task data to the webview
    */
-  private async sendTaskData(webview: vscode.Webview, task: Task): Promise<void> {
+  private async sendTaskData(
+    webview: vscode.Webview,
+    task: Task,
+    isStale: () => boolean = () => false
+  ): Promise<void> {
     if (!this.parser) return;
 
     try {
@@ -473,7 +489,7 @@ export class TaskDetailProvider {
         subtaskSummaries,
       };
 
-      webview.postMessage({ type: 'taskData', data });
+      if (!isStale()) webview.postMessage({ type: 'taskData', data });
     } catch (error) {
       console.error('[Backlog.md] Error sending task data:', error);
       webview.postMessage({ type: 'error', message: 'Failed to load task data' });

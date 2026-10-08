@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -73,13 +73,57 @@ describe('TaskDetailProvider.openTask reveal', () => {
     return { provider, sendTaskData };
   }
 
+  const onActive = vi.fn();
+  beforeEach(() => TaskDetailProvider.onActiveTaskChanged(onActive));
+
   it('reveal: false refreshes the open panel without bringing it to the front', async () => {
     const p = panel();
     statics.currentPanel = p;
+    statics.currentTaskRef = { taskId: 'D-1', filePath: realPath };
     const { provider, sendTaskData } = providerFor('D-1');
     await provider.openTask('D-1', { reveal: false });
     expect(p.reveal).not.toHaveBeenCalled();
-    expect(sendTaskData).toHaveBeenCalledWith(p.webview, expect.objectContaining({ id: 'D-1' }));
+    expect(sendTaskData).toHaveBeenCalledWith(
+      p.webview,
+      expect.objectContaining({ id: 'D-1' }),
+      expect.any(Function)
+    );
+    expect(onActive).not.toHaveBeenCalled();
+  });
+
+  it('reveal: false on a visible panel keeps the card highlight', async () => {
+    const p = { ...panel(), visible: true };
+    statics.currentPanel = p;
+    statics.currentTaskRef = { taskId: 'D-1', filePath: realPath };
+    const { provider } = providerFor('D-1');
+    await provider.openTask('D-1', { reveal: false });
+    expect(onActive).toHaveBeenCalledWith('D-1');
+  });
+
+  it('reveal: false shows no error when the task cannot be read', async () => {
+    statics.currentPanel = panel();
+    const { provider } = providerFor('D-1');
+    (provider as unknown as { parser: { getTask: Mock } }).parser.getTask.mockResolvedValue(
+      undefined
+    );
+    await provider.openTask('D-1', { reveal: false });
+    expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+  });
+
+  it('a refresh that a later open overtakes posts no stale data', async () => {
+    statics.currentPanel = panel();
+    statics.currentTaskRef = { taskId: 'D-1', filePath: realPath };
+    const { provider, sendTaskData } = providerFor('D-1');
+    let release!: () => void;
+    sendTaskData.mockImplementationOnce(
+      (_w: unknown, _t: unknown, isStale: () => boolean) =>
+        new Promise<void>((done) => (release = () => (expect(isStale()).toBe(true), done())))
+    );
+    const refresh = provider.openTask('D-1', { reveal: false });
+    await vi.waitFor(() => expect(sendTaskData).toHaveBeenCalledTimes(1));
+    await provider.openTask('D-1');
+    release();
+    await refresh;
   });
 
   it('reveal: false never creates a panel', async () => {

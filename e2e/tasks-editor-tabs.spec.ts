@@ -127,6 +127,26 @@ test.describe('Editor-tab board card press and drag', () => {
     expect(await selects(page)).toEqual([]);
   });
 
+  test('a focus restore inside a press elsewhere on the board does not select', async ({
+    page,
+  }) => {
+    await page.locator('[data-testid="task-TASK-2"]').focus();
+    await page.evaluate(() => {
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      (document.querySelector('[data-testid="task-TASK-1"]') as HTMLElement).focus();
+    });
+    expect(await selects(page)).toEqual([]);
+  });
+
+  test('Tab to a card selects it', async ({ page }) => {
+    await page.locator('[data-testid="task-TASK-1"]').focus();
+    await page.keyboard.press('Shift+Tab');
+    await clearPostedMessages(page);
+    await page.keyboard.press('Tab');
+    await expect(page.locator('[data-testid="task-TASK-1"]')).toBeFocused();
+    expect(await selects(page)).toEqual([selectTask1]);
+  });
+
   test('a key that moves focus to a card selects it', async ({ page }) => {
     await page.locator('[data-testid="task-TASK-1"]').focus();
     await page.keyboard.press('j');
